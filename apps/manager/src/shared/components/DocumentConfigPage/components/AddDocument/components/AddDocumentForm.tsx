@@ -25,6 +25,7 @@ type Props = {
 	onClose: () => void;
 	onSubmit: (visualization: DocumentItem) => void;
 	documentItem?: DocumentItem;
+	sortOrder?: number;
 };
 
 const documentPayloadSchema = documentItemSchema.extend({
@@ -38,6 +39,7 @@ export function AddDocumentForm({
 	onClose,
 	onSubmit,
 	documentItem,
+	sortOrder,
 }: Props) {
 	const { show } = useAlert(
 		({ message }) => message,
@@ -51,6 +53,7 @@ export function AddDocumentForm({
 		shouldFocusError: false,
 		defaultValues: {
 			...documentItem,
+			sortOrder: sortOrder ?? 1,
 		},
 	});
 
@@ -126,6 +129,22 @@ export function AddDocumentForm({
 									label: i18n.t("PDF"),
 									value: "PDF",
 								},
+								{
+									label: i18n.t("DOCX"),
+									value: "DOCX",
+								},
+								{
+									label: i18n.t("ZIP"),
+									value: "ZIP",
+								},
+								{
+									label: i18n.t("XLSX"),
+									value: "XLSX",
+								},
+								{
+									label: i18n.t("TXT"),
+									value: "TXT",
+								},
 							]}
 							name={"type"}
 							label={i18n.t("File type")}
@@ -134,7 +153,7 @@ export function AddDocumentForm({
 							required
 							dataTest={"file-input"}
 							name={"file"}
-							accept="application/pdf"
+							accept="application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.zip,application/zip,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.txt,text/plain"
 							label={i18n.t("File")}
 						/>
 					</form>

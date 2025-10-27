@@ -1,15 +1,14 @@
-import {
-	AnalyticsData,
-	VisualizationConfig,
-	YearOverYearVisualizationConfig,
-} from "@packages/shared/schemas";
-import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useDataQuery } from "@dhis2/app-runtime";
 import { getVisualizationDimensions, getVisualizationFilters } from "../utils";
 import { PeriodTypeCategory, PeriodUtility } from "@hisptz/dhis2-utils";
 import { snakeCase } from "lodash";
 import { DateTime, Interval } from "luxon";
+import {
+	AnalyticsData,
+	VisualizationConfig,
+	YearOverYearVisualizationConfig,
+} from "../schemas";
 
 const analyticsQuery = {
 	analytics: {
@@ -32,11 +31,11 @@ const analyticsQuery = {
 
 export function useAnalytics({
 	visualizationConfig,
+	params,
 }: {
 	visualizationConfig: VisualizationConfig;
+	params: Map<string, string>;
 }) {
-	const searchParams = useSearchParams();
-
 	const [selectedOrgUnits, setSelectedOrgUnits] = useState<string[]>([]);
 	const [selectedPeriods, setSelectedPeriods] = useState<string[]>([]);
 
@@ -47,20 +46,19 @@ export function useAnalytics({
 	});
 
 	useEffect(() => {
-		const updatedSearchParams = new Map(searchParams);
 		refetch({
 			filters: getVisualizationFilters(visualizationConfig, {
-				searchParams: updatedSearchParams,
+				searchParams: params,
 				selectedOrgUnits,
 				selectedPeriods,
 			}),
 			dimensions: getVisualizationDimensions(visualizationConfig, {
-				searchParams: updatedSearchParams,
+				searchParams: params,
 				selectedOrgUnits,
 				selectedPeriods,
 			}),
 		});
-	}, [refetch, searchParams, selectedOrgUnits, selectedPeriods]);
+	}, [refetch, params, selectedOrgUnits, selectedPeriods]);
 	return {
 		loading,
 		analytics: data?.analytics,
@@ -96,14 +94,15 @@ function normalizeYears(years: string[]) {
 
 export function useYearOverYearAnalytics({
 	visualizationConfig,
+	params,
 }: {
 	visualizationConfig: YearOverYearVisualizationConfig;
+	params: Map<string, string>;
 }) {
 	const [data, setData] = useState<Map<string, AnalyticsData>>();
-	const searchParams = useSearchParams();
 	const [selectedOrgUnits, setSelectedOrgUnits] = useState<string[]>([]);
 	const [selectedPeriods, setSelectedPeriods] = useState<string[]>(
-		searchParams?.get("pe")?.split(",") ?? [],
+		params?.get("pe")?.split(",") ?? [],
 	);
 
 	const { refetch, loading } = useDataQuery<{
@@ -122,7 +121,7 @@ export function useYearOverYearAnalytics({
 		Array.from(new Set(periods.map((pe) => pe.slice(0, 4))));
 
 	const selectedYears = selectedPeriods.filter(
-		(periodId) =>
+		(periodId: string) =>
 			PeriodUtility.getPeriodById(periodId).type.rank === 8 ||
 			periodId.includes("YEAR"),
 	);
