@@ -12,7 +12,7 @@ export const GET: Operation = async (
 ) => {
     try {
         const { id: configId } = req.params;
-        
+
         if (!configId) {
             return res.status(400).json({
                 success: false,
@@ -28,11 +28,11 @@ export const GET: Operation = async (
             queueNames.metadataUpload,
             queueNames.dataDownload,
             queueNames.dataUpload,
-            queueNames.dataDeletion,   
-            queueNames.failed  
+            queueNames.dataDeletion,
+            queueNames.failed
         ];
 
-         const queueStatuses = await getMultipleQueueStatus(allQueueNames, configId);
+        const queueStatuses = await getMultipleQueueStatus(allQueueNames, configId);
         const health = await getSystemHealth([configId]);
 
         const statusByType = {
@@ -40,41 +40,43 @@ export const GET: Operation = async (
             metadataUpload: queueStatuses.find((q: any) => q.queue === queueNames.metadataUpload),
             dataDownload: queueStatuses.find((q: any) => q.queue === queueNames.dataDownload),
             dataUpload: queueStatuses.find((q: any) => q.queue === queueNames.dataUpload),
-            dataDeletion: queueStatuses.find((q: any) => q.queue === queueNames.dataDeletion),  
-            dlq: queueStatuses.find((q: any) => q.queue === queueNames.failed),  
+            dataDeletion: queueStatuses.find((q: any) => q.queue === queueNames.dataDeletion),
+            dlq: queueStatuses.find((q: any) => q.queue === queueNames.failed),
         };
 
-         const buildProcessStatusFromQueue = (queueData: any) => ({
+        const buildProcessStatusFromQueue = (queueData: any) => ({
             queued: queueData?.messages_ready || 0,
             processing: queueData?.messages_unacknowledged || 0,
-            failed: 0  
+            failed: 0
         });
 
         const progressData = await getAllProgress(configId);
         const failedCount = statusByType.dlq?.messages || 0;
 
         const processes = {
-            metadataDownload: buildProcessStatus('metadata-download', progressData, failedCount),
-            metadataUpload: buildProcessStatus('metadata-upload', progressData, failedCount),
-             dataDownload: buildProcessStatusFromQueue(statusByType.dataDownload),
+            // metadataDownload: buildProcessStatus('metadata-download', progressData, failedCount),
+            // metadataUpload: buildProcessStatus('metadata-upload', progressData, failedCount),
+            metadataDownload: buildProcessStatusFromQueue(statusByType.metadataDownload),
+            metadataUpload: buildProcessStatusFromQueue(statusByType.metadataUpload),
+            dataDownload: buildProcessStatusFromQueue(statusByType.dataDownload),
             dataUpload: buildProcessStatusFromQueue(statusByType.dataUpload),
             dataDeletion: buildProcessStatusFromQueue(statusByType.dataDeletion)
         };
- 
+
         res.json({
             success: true,
             configId,
-            queues: statusByType,        
-            processes,                   
+            queues: statusByType,
+            processes,
             health,
             timestamp: new Date().toISOString()
         });
 
     } catch (error: any) {
         logger.error(`Failed to get status for config ${req.params.id}:`, error);
-        
+
         const errorMessage = error instanceof Error ? error.message : String(error);
-        
+
         res.status(500).json({
             success: false,
             configId: req.params.id,
@@ -111,7 +113,7 @@ GET.apiDoc = {
                             queues: {
                                 type: "object",
                                 properties: {
-                                    metadataDownload: { 
+                                    metadataDownload: {
                                         type: "object",
                                         properties: {
                                             queue: { type: "string" },
@@ -136,7 +138,7 @@ GET.apiDoc = {
                                     totalQueues: { type: "number" },
                                     activeQueues: { type: "number" },
                                     failedQueues: { type: "number" },
-                                    issues: { 
+                                    issues: {
                                         type: "array",
                                         items: { type: "string" }
                                     }
