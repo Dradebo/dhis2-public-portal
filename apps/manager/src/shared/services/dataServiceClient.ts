@@ -16,7 +16,7 @@ export interface ApiResponse {
     try {
         const result = await engine.mutate({
             type: method,
-            resource: `routes/data-service/run/${endpoint}`,
+            resource: `routes/data-service/run${endpoint}`,
             data: data || {},
         });
         return result as ApiResponse;
@@ -36,7 +36,7 @@ export async function queryDataServiceRoute(
     try {
         const result = await engine.query({
             result: {
-                resource: `routes/data-service/run/${endpoint}`,
+                resource: `routes/data-service/run${endpoint}`,
             },
         });
         return result.result as ApiResponse;
