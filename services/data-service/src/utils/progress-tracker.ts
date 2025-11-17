@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import logger from '@/logging';
 
 export type JobType = 'metadata-download' | 'metadata-upload' | 'data-download' | 'data-upload';
@@ -20,22 +21,26 @@ export interface ProcessStatus {
 
 // Helper function to get progress file path
 function getProgressFile(configId: string): string {
-    return `./outputs/data/${configId}/progress.json`;
+    return path.resolve(process.cwd(), 'outputs', 'data', configId, 'progress.json');
 }
 
 // Save progress to file
 async function saveProgress(configId: string, jobType: JobType, progress: SimpleJobProgress): Promise<void> {
     const progressFile = getProgressFile(configId);
-    const dir = `./outputs/data/${configId}`;
-    
+    const dir = path.resolve(process.cwd(), 'outputs', 'data', configId);
+
+
     await fs.promises.mkdir(dir, { recursive: true });
-    
+
     let allProgress: Record<string, SimpleJobProgress> = {};
     try {
         const existing = await fs.promises.readFile(progressFile, 'utf8');
         allProgress = JSON.parse(existing);
-    } catch {}
-    
+        logger.info(`[Progress] Loaded existing progress data for ${configId}`);
+    } catch (error) {
+        logger.info(`[Progress] No existing progress file for ${configId}, creating new one`);
+    }
+
     allProgress[jobType] = progress;
     await fs.promises.writeFile(progressFile, JSON.stringify(allProgress, null, 2));
 }
@@ -48,9 +53,9 @@ export async function startJob(configId: string, jobType: JobType, totalItems: n
 
 // Update progress for a job
 export async function updateProgress(
-    configId: string, 
-    jobType: JobType, 
-    totalItems: number, 
+    configId: string,
+    jobType: JobType,
+    totalItems: number,
     processedItems: number
 ): Promise<void> {
     const progress: SimpleJobProgress = {
@@ -63,7 +68,7 @@ export async function updateProgress(
     };
 
     await saveProgress(configId, jobType, progress);
-    
+
     if (processedItems % 10 === 0 || processedItems === totalItems) {
         logger.info(`[Progress] ${configId}-${jobType}: ${processedItems}/${totalItems} items`);
     }
@@ -95,8 +100,10 @@ export async function getAllProgress(configId: string): Promise<Record<string, S
     try {
         const progressFile = getProgressFile(configId);
         const data = await fs.promises.readFile(progressFile, 'utf8');
-        return JSON.parse(data);
-    } catch {
+        const progress = JSON.parse(data);
+        return progress;
+    } catch (error) {
+        logger.info(`[Progress] No progress file found for ${configId}: ${error}`);
         return {};
     }
 }
@@ -104,18 +111,22 @@ export async function getAllProgress(configId: string): Promise<Record<string, S
 // Build process status for UI
 export function buildProcessStatus(jobType: JobType, progressData: Record<string, SimpleJobProgress>, failedCount: number = 0): ProcessStatus {
     const progress = progressData[jobType];
-    
+
+ 
     if (!progress) {
+        logger.info(`[Progress] No progress data for ${jobType}, returning zeros`);
         return { queued: 0, processing: 0, failed: failedCount };
     }
-    
+
     const remaining = progress.totalItems - progress.processedItems;
     const processing = progress.isActive && remaining > 0 ? 1 : 0;
     const queued = Math.max(0, remaining - processing);
-    
-    return {
+
+    const status = {
         queued,
-        processing, 
+        processing,
         failed: failedCount
     };
+
+     return status;
 }
