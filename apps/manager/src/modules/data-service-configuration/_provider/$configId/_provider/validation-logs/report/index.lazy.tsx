@@ -1,5 +1,5 @@
-import React, { Suspense, lazy, FC } from 'react';
-import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
+import React  from 'react';
+import { createLazyFileRoute } from "@tanstack/react-router";
 import i18n from "@dhis2/d2-i18n";
 import { ModuleContainer } from '../../../../../../../shared/components/ModuleContainer';
 

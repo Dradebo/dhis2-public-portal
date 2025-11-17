@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useDataEngine } from "@dhis2/app-runtime";
 import { getConfigStatus, getFailedQueueSources } from "../../../../../../../services/dataServiceClient";
 
 interface ProcessStatus {
@@ -45,12 +46,14 @@ function countFailedMessagesBySourceQueues(sourceQueueCounts: Record<string, num
 }
 
 export function useProcessMonitoring(configId: string) {
+	const engine = useDataEngine();
+	
 	return useQuery({
 		queryKey: ['processStatus', configId],
 		queryFn: async () => {
 			const [statusResponse, failedQueueResponse] = await Promise.all([
-				getConfigStatus(configId),
-				getFailedQueueSources(configId).catch(() => ({
+				getConfigStatus(engine, configId),
+				getFailedQueueSources(engine, configId).catch(() => ({
 					success: false,
 					message: 'Failed to fetch failed queue sources',
 					data: {

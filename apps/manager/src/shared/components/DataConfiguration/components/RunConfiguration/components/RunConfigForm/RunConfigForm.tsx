@@ -53,7 +53,8 @@ export function RunConfigForm({
 	onClose: () => void;
 }) {
 	const queryClient = useQueryClient();
- 	const { show } = useAlert(
+	const engine = useDataEngine();
+	const { show } = useAlert(
 		({ message }) => message,
 		({ type }) => ({ ...type, duration: 3000 }),
 	);
@@ -89,21 +90,21 @@ export function RunConfigForm({
 					selectedMaps: data.selectedMaps || [],
 					selectedDashboards: data.selectedDashboards || [],
 				};
-				result = await downloadMetadata(config.id, metadataRequest);
+				result = await downloadMetadata(engine, config.id, metadataRequest);
 			} else if (data.service === "data-deletion") {
 				const deletionRequest = {
 					dataItemsConfigIds: data.dataItemsConfigIds,
 					runtimeConfig: data.runtimeConfig,
 				};
 
-				result = await startDataDeletion(config.id, deletionRequest);
+				result = await startDataDeletion(engine, config.id, deletionRequest);
 			} else if (data.service === "data-validation") {
 				const validationRequest = {
 					dataItemsConfigIds: data.dataItemsConfigIds,
 					runtimeConfig: data.runtimeConfig,
 				};
 
-				result = await validateData(config.id, validationRequest);
+				result = await validateData(engine, config.id, validationRequest);
 			} else {
 
 				const dataRequest = {
@@ -111,7 +112,7 @@ export function RunConfigForm({
 					runtimeConfig: data.runtimeConfig,
 				};
 
-				result = await downloadData(config.id, dataRequest);
+				result = await downloadData(engine, config.id, dataRequest);
 			}
 
 			queryClient.invalidateQueries({

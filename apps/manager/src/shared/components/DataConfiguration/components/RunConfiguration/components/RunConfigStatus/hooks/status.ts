@@ -1,6 +1,7 @@
 import { DataServiceRunStatus } from "@packages/shared/schemas";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { useDataEngine } from "@dhis2/app-runtime";
 import { getConfigStatus } from "../../../../../../../services/dataServiceClient";
 
 export interface QueueStatusResult {
@@ -35,8 +36,10 @@ export interface ConfigStatusResponse {
 
 
 export function useDataConfigRunStatus(id: string) {
+	const engine = useDataEngine();
+	
 	async function fetchStatus(): Promise<ConfigStatusResponse> {
- 		const response = await getConfigStatus(id);
+ 		const response = await getConfigStatus(engine, id);
 		if (response.success) {
 			return response as any as ConfigStatusResponse;
 		} else {

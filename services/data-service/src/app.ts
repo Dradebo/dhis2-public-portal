@@ -9,7 +9,6 @@ import path, { dirname } from "path";
 import swagger from "swagger-ui-express";
 import { fileURLToPath } from "url";
 import { startWorker } from "./rabbit/worker";
-import { conditionalApiKeyMiddleware } from "./middleware/apiKey";
 
 interface HttpError extends Error {
 	status?: number;
@@ -24,20 +23,8 @@ interface ErrorResponse {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const app = express();
-
-app.use(cors({
-	origin: [
-		env.FLEXIPORTAL_URL || 'http://localhost:3001',
-		'http://localhost:3000'
-	],
-	credentials: true,
-	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-	allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with', 'x-api-key']
-}));
-
+const app = express(); 
 app.use(express.json());
-app.use(conditionalApiKeyMiddleware);
 
 initialize({
 	app,

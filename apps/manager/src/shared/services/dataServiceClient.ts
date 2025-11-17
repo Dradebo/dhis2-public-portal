@@ -7,100 +7,74 @@ export interface ApiResponse {
     queues?: string[];
 }
 
-const getBaseUrl = (): string => {
-    return process.env.DATA_SERVICE_URL || 'http://localhost:3003';
-};
-
-const getApiKey = (): string | undefined => {
-    return process.env.DATA_SERVICE_API_KEY;
-};
-
-export async function apiCall(
+ export async function executeDataServiceRoute(
+    engine: any,
     endpoint: string,
-    options: RequestInit = {}
+    data?: any,
+    method: 'create' | 'delete' = 'create'
 ): Promise<ApiResponse> {
-    const url = `${getBaseUrl()}${endpoint}`;
-
-    const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        ...options.headers,
-    };
-
-    const apiKey = getApiKey();
-    if (apiKey) {
-        headers['x-api-key'] = apiKey;
-    }
-
-    const config: RequestInit = {
-        ...options,
-        headers,
-    };
-
     try {
-        const response = await fetch(url, config);
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(
-                errorData.message || `HTTP ${response.status}: ${response.statusText}`
-            );
-        }
-
-        const result = await response.json();
-        return result;
+        const result = await engine.mutate({
+            type: method,
+            resource: `routes/data-service/run/${endpoint}`,
+            data: data || {},
+        });
+        return result as ApiResponse;
     } catch (error) {
         if (error instanceof Error) {
             throw error;
         }
-        throw new Error(`Network error: ${String(error)}`);
+        throw new Error(`API call failed: ${String(error)}`);
     }
 }
 
-// Specific API functions
-export async function downloadMetadata(configId: string, data: any): Promise<ApiResponse> {
-    return apiCall(`/metadata-download/${configId}`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-    });
+// Helper function to query DHIS2 engine for data service routes  
+export async function queryDataServiceRoute(
+    engine: any,
+    endpoint: string
+): Promise<ApiResponse> {
+    try {
+        const result = await engine.query({
+            result: {
+                resource: `routes/data-service/run/${endpoint}`,
+            },
+        });
+        return result.result as ApiResponse;
+    } catch (error) {
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error(`Query failed: ${String(error)}`);
+    }
 }
 
-export async function downloadData(configId: string, data: any): Promise<ApiResponse> {
-    return apiCall(`/data-download/${configId}`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-    });
+export async function downloadMetadata(engine: any, configId: string, data: any): Promise<ApiResponse> {
+    return executeDataServiceRoute(engine, `/metadata-download/${configId}`, data);
 }
 
-export async function startDataDeletion(configId: string, data: any): Promise<ApiResponse> {
-    return apiCall(`/data-delete/${configId}`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-    });
+export async function downloadData(engine: any, configId: string, data: any): Promise<ApiResponse> {
+    return executeDataServiceRoute(engine, `/data-download/${configId}`, data);
+}
+
+export async function startDataDeletion(engine: any, configId: string, data: any): Promise<ApiResponse> {
+    return executeDataServiceRoute(engine, `/data-delete/${configId}`, data);
 }
  
-export async function validateData(configId: string, data: any): Promise<ApiResponse> {
-    return apiCall(`/data-validation/${configId}`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-    });
+export async function validateData(engine: any, configId: string, data: any): Promise<ApiResponse> {
+    return executeDataServiceRoute(engine, `/data-validation/${configId}`, data);
 }
  
-export async function createQueues(configId: string): Promise<ApiResponse> {
-    return apiCall(`/queues/${configId}`, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'create' }),
-    });
+export async function createQueues(engine: any, configId: string): Promise<ApiResponse> {
+    return executeDataServiceRoute(engine, `/queues/${configId}`, { action: 'create' });
 }
 
-export async function deleteQueues(configId: string): Promise<ApiResponse> {
-    return apiCall(`/queues/${configId}`, {
-        method: 'DELETE',
-    });
+export async function deleteQueues(engine: any, configId: string): Promise<ApiResponse> {
+    return executeDataServiceRoute(engine, `/queues/${configId}`, {}, 'delete');
 } 
 
-export async function getConfigStatus(configId: string): Promise<ApiResponse> {
+export async function getConfigStatus(engine: any, configId: string): Promise<ApiResponse> {
     try {
-        const response = await apiCall(`/status/${configId}`);
+        const response = await queryDataServiceRoute(engine, `/status/${configId}`);
         console.log(`getConfigStatus response for ${configId}:`, response);
         return response;
     } catch (error) {
@@ -109,7 +83,7 @@ export async function getConfigStatus(configId: string): Promise<ApiResponse> {
     }
 }
 
-export async function getFailedQueue(configId: string, options: { 
+export async function getFailedQueue(engine: any, configId: string, options: { 
     limit?: number; 
     offset?: number; 
     includeMessages?: boolean;
@@ -135,7 +109,7 @@ export async function getFailedQueue(configId: string, options: {
             queryParams.set('queue', queue);
         }
         
-        const response = await apiCall(`/failed-queue/${configId}?${queryParams}`);
+        const response = await queryDataServiceRoute(engine, `/failed-queue/${configId}?${queryParams}`);
          return response;
     } catch (error) {
         console.error(`getFailedQueue error for ${configId}:`, error);
@@ -143,37 +117,29 @@ export async function getFailedQueue(configId: string, options: {
     }
 }
 
-export async function getFailedQueueSources(configId: string): Promise<ApiResponse> {
+export async function getFailedQueueSources(engine: any, configId: string): Promise<ApiResponse> {
     try {
-        const response = await apiCall(`/failed-queue/${configId}?onlyQueues=true`);
+        const response = await queryDataServiceRoute(engine, `/failed-queue/${configId}?onlyQueues=true`);
          return response;
     } catch (error) {
          throw error;
     }
 }
 
-export async function clearFailedQueue(configId: string): Promise<ApiResponse> {
-    return apiCall(`/failed-queue/${configId}`, {
-        method: 'DELETE',
-    });
+export async function clearFailedQueue(engine: any, configId: string): Promise<ApiResponse> {
+    return executeDataServiceRoute(engine, `/failed-queue/${configId}`, {}, 'delete');
 }
 
 // Retry operations
 export async function retryByProcessType(
+    engine: any,
     configId: string, 
     processType: 'data-upload' | 'metadata-upload' | 'data-download' | 'metadata-download' | 'data-delete',
     maxRetries: number = 10
 ): Promise<ApiResponse> {
-    return apiCall(`/retry/${configId}`, {
-        method: 'POST',
-        body: JSON.stringify({
-            maxRetries,
-        }),
-    });
+    return executeDataServiceRoute(engine, `/retry/${configId}`, { maxRetries });
 }
 
-export async function retrySingleMessage(configId: string, messageId: string): Promise<ApiResponse> {
-    return apiCall(`/retry/${configId}/message/${messageId}`, {
-        method: 'POST',
-    });
+export async function retrySingleMessage(engine: any, configId: string, messageId: string): Promise<ApiResponse> {
+    return executeDataServiceRoute(engine, `/retry/${configId}/message/${messageId}`, {});
 }

@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-	getFailedQueue, 
-	clearFailedQueue, 
+import { useDataEngine } from "@dhis2/app-runtime";
+import {
+	getFailedQueue,
+	clearFailedQueue,
 	retryByProcessType,
 	retrySingleMessage
 } from "../../../../../../../services/dataServiceClient";
@@ -30,7 +31,7 @@ interface FailedQueueData {
 	totalFailedMessages: number;
 	messages: FailedMessage[];
 	sourceQueues?: string[];
-	sourceQueueCounts?: Record<string, number>; 
+	sourceQueueCounts?: Record<string, number>;
 	retrievedAt: string;
 	pagination?: {
 		limit: number;
@@ -43,23 +44,24 @@ interface FailedQueueData {
 	};
 }
 
-export function useFailedQueueDetails(configId: string, options: { 
-	limit?: number; 
+export function useFailedQueueDetails(configId: string, options: {
+	limit?: number;
 	offset?: number;
 	includeMessages?: boolean;
 	queue?: string;
 } = {}) {
 	const queryClient = useQueryClient();
+	const engine = useDataEngine();
 	const { limit = 50, offset = 0, includeMessages = true, queue } = options;
 
 	const query = useQuery({
 		queryKey: ["failed-queue", configId, limit, offset, includeMessages, queue],
 		queryFn: async (): Promise<FailedQueueData> => {
-			const response = await getFailedQueue(configId, { 
-				limit, 
-				offset, 
+			const response = await getFailedQueue(engine, configId, {
+				limit,
+				offset,
 				includeMessages,
-				queue 
+				queue
 			});
 			if (!response.success) {
 				throw new Error(response.message || 'Failed to fetch failed queue data');
@@ -67,10 +69,10 @@ export function useFailedQueueDetails(configId: string, options: {
 			return response.data as FailedQueueData;
 		},
 		enabled: !!configId,
-		refetchInterval: 10000,  
-	});	const clearMutation = useMutation({
+		refetchInterval: 10000,
+	}); const clearMutation = useMutation({
 		mutationFn: async () => {
-			const response = await clearFailedQueue(configId);
+			const response = await clearFailedQueue(engine, configId);
 			if (!response.success) {
 				throw new Error(response.message || 'Failed to clear failed queue');
 			}
@@ -84,7 +86,7 @@ export function useFailedQueueDetails(configId: string, options: {
 
 	const retryByTypeMutation = useMutation({
 		mutationFn: async (processType: 'data-upload' | 'metadata-upload' | 'data-download' | 'metadata-download') => {
-			const response = await retryByProcessType(configId, processType);
+			const response = await retryByProcessType(engine, configId, processType);
 			if (!response.success) {
 				throw new Error(response.message || `Failed to retry ${processType} messages`);
 			}
@@ -98,7 +100,7 @@ export function useFailedQueueDetails(configId: string, options: {
 
 	const retrySingleMutation = useMutation({
 		mutationFn: async (messageId: string) => {
-			const response = await retrySingleMessage(configId, messageId);
+			const response = await retrySingleMessage(engine, configId, messageId);
 			if (!response.success) {
 				throw new Error(response.message || `Failed to retry message ${messageId}`);
 			}

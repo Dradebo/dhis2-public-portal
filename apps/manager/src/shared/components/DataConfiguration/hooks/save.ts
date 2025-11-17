@@ -77,7 +77,7 @@ export function useCreateDataSource() {
 			});
 
 			try {
-				await createQueues(data.id);
+				await createQueues(engine, data.id);
 			} catch (queueError) {
 				show({
 					message: i18n.t("Configuration saved, but queue creation failed. Queues will be created automatically when needed."),
@@ -345,7 +345,7 @@ export function useDeleteDataSource() {
 	const deleteConfig = async (config: DataServiceConfig) => {
 		try {
 			try {
-				await deleteQueues(config.id);
+				await deleteQueues(engine, config.id);
 			} catch (queueError) {
 				console.warn(`Failed to delete queues for config ${config.id}:`, queueError);
 			}
