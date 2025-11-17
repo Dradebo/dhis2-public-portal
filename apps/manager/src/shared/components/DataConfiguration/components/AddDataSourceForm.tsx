@@ -128,7 +128,7 @@ export function AddDataSourceForm({
 				</ModalContent>
 				<ModalActions>
 					<ButtonStrip>
-						<Button>{i18n.t("Cancel")}</Button>
+						<Button type="button" onClick={() => onClose()}>{i18n.t("Cancel")}</Button>
 						<Button
 							loading={
 								form.formState.isSubmitting ||

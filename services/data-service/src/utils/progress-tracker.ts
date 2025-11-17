@@ -36,7 +36,6 @@ async function saveProgress(configId: string, jobType: JobType, progress: Simple
     try {
         const existing = await fs.promises.readFile(progressFile, 'utf8');
         allProgress = JSON.parse(existing);
-        logger.info(`[Progress] Loaded existing progress data for ${configId}`);
     } catch (error) {
         logger.info(`[Progress] No existing progress file for ${configId}, creating new one`);
     }
@@ -47,7 +46,6 @@ async function saveProgress(configId: string, jobType: JobType, progress: Simple
 
 // Start a new job
 export async function startJob(configId: string, jobType: JobType, totalItems: number): Promise<void> {
-    logger.info(`[Progress] Starting ${jobType} for ${configId}: ${totalItems} items`);
     await updateProgress(configId, jobType, totalItems, 0);
 }
 
@@ -69,9 +67,6 @@ export async function updateProgress(
 
     await saveProgress(configId, jobType, progress);
 
-    if (processedItems % 10 === 0 || processedItems === totalItems) {
-        logger.info(`[Progress] ${configId}-${jobType}: ${processedItems}/${totalItems} items`);
-    }
 }
 
 // Complete a job
@@ -79,7 +74,6 @@ export async function completeJob(configId: string, jobType: JobType): Promise<v
     const current = await getProgress(configId, jobType);
     if (current) {
         await updateProgress(configId, jobType, current.totalItems, current.totalItems);
-        logger.info(`[Progress] Completed ${jobType} for ${configId}`);
     }
 }
 
@@ -103,7 +97,6 @@ export async function getAllProgress(configId: string): Promise<Record<string, S
         const progress = JSON.parse(data);
         return progress;
     } catch (error) {
-        logger.info(`[Progress] No progress file found for ${configId}: ${error}`);
         return {};
     }
 }
@@ -112,9 +105,8 @@ export async function getAllProgress(configId: string): Promise<Record<string, S
 export function buildProcessStatus(jobType: JobType, progressData: Record<string, SimpleJobProgress>, failedCount: number = 0): ProcessStatus {
     const progress = progressData[jobType];
 
- 
+
     if (!progress) {
-        logger.info(`[Progress] No progress data for ${jobType}, returning zeros`);
         return { queued: 0, processing: 0, failed: failedCount };
     }
 
@@ -128,5 +120,5 @@ export function buildProcessStatus(jobType: JobType, progressData: Record<string
         failed: failedCount
     };
 
-     return status;
+    return status;
 }
