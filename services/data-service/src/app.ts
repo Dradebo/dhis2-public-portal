@@ -1,5 +1,4 @@
 import express from "express";
-import cors from "cors";
 import https from "https";
 import { env } from "@/env";
 import * as fs from "node:fs";
