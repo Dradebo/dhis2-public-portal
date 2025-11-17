@@ -5,8 +5,8 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"POT-Creation-Date: 2025-11-17T08:31:00.792Z\n"
-"PO-Revision-Date: 2025-11-17T08:31:00.794Z\n"
+"POT-Creation-Date: 2025-11-17T10:04:12.029Z\n"
+"PO-Revision-Date: 2025-11-17T10:04:12.029Z\n"
 
 msgid "Could not get Appearance configurations"
 msgstr "Could not get Appearance configurations"
@@ -19,6 +19,12 @@ msgstr "Import/Export Configuration"
 
 msgid "Back"
 msgstr "Back"
+
+msgid "Data Validation"
+msgstr "Data Validation"
+
+msgid "Generated Report"
+msgstr "Generated Report"
 
 msgid "Data service configuration"
 msgstr "Data service configuration"
@@ -362,9 +368,6 @@ msgstr "Metadata Migration"
 
 msgid "Data Migration"
 msgstr "Data Migration"
-
-msgid "Data Validation"
-msgstr "Data Validation"
 
 msgid "Data Deletion"
 msgstr "Data Deletion"
@@ -1487,6 +1490,16 @@ msgstr ""
 
 msgid "Configure data service"
 msgstr "Configure data service"
+
+msgid ""
+"Validate data integrity between source and destination DHIS2 instances to "
+"identify discrepancies"
+msgstr ""
+"Validate data integrity between source and destination DHIS2 instances to "
+"identify discrepancies"
+
+msgid "Validate data"
+msgstr "Validate data"
 
 msgid "Menu"
 msgstr "Menu"
