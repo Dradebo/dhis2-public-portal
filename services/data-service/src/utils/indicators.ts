@@ -125,7 +125,7 @@ export async function getCategoryCombos(categoryOptionComboIds: string[], routeI
     client,
     'categories',
     categoriesIds,
-    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated,categoryOptions[:owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated]',
+    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated,categoryOptions[:owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated]',
     5
 
   );
@@ -141,7 +141,7 @@ export async function getCategoryCombos(categoryOptionComboIds: string[], routeI
     client,
     'categoryOptions',
     categoryOptionIds,
-    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated,name,shortName',
+    ':owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated,name,shortName',
     5
 
   );
@@ -371,7 +371,7 @@ export async function getCategoryCombosFromDataElements(
     client,
     'categories',
     categoriesIds,
-    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated,categoryOptions[:owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated]',
+    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated,categoryOptions[:owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated]',
     5
 
   );
@@ -386,7 +386,7 @@ export async function getCategoryCombosFromDataElements(
     client,
     'categoryOptions',
     categoryOptionIds,
-    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated,name,shortName',
+    ':owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated,name,shortName',
     5
 
   );
