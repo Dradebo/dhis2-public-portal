@@ -47,7 +47,7 @@ export async function getDataElementsFromServer(dataElementIds: string[], routeI
     client,
     'dataElements',
     dataElementIds,
-    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
+    ':owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
     5
 
   );
@@ -80,7 +80,7 @@ export async function getCategoryCombos(categoryOptionComboIds: string[], routeI
     client,
     'categoryOptionCombos',
     categoryOptionComboIds,
-    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
+    ':owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
     5
 
   );
@@ -103,7 +103,7 @@ export async function getCategoryCombos(categoryOptionComboIds: string[], routeI
     client,
     'categoryCombos',
     categoryComboIds,
-    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
+    ':owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
     5
 
   );
@@ -125,7 +125,7 @@ export async function getCategoryCombos(categoryOptionComboIds: string[], routeI
     client,
     'categories',
     categoriesIds,
-    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated,categoryOptions[:owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated]',
+    ':owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated,categoryOptions[:owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated]',
     5
 
   );
@@ -350,7 +350,7 @@ export async function getCategoryCombosFromDataElements(
     client,
     'categoryCombos',
     categoryComboIds,
-    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated,categoryOptionCombos[:owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated]',
+    ':owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated,categoryOptionCombos[:owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated]',
     5
 
   );
@@ -371,7 +371,7 @@ export async function getCategoryCombosFromDataElements(
     client,
     'categories',
     categoriesIds,
-    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated,categoryOptions[:owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated]',
+    ':owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated,categoryOptions[:owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated]',
     5
 
   );
@@ -415,7 +415,7 @@ export async function getIndicatorTypes(indicatorTypeIds: string[], routeId?: st
     client,
     'indicatorTypes',
     indicatorTypeIds,
-    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
+    ':owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
     5
 
   );
@@ -469,7 +469,7 @@ export async function getLegendSets(legendSetIds: string[], routeId?: string) {
     client,
     'legendSets',
     legendSetIds,
-    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated,legends[:owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated]',
+    ':owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated,legends[:owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated]',
     5
 
   );

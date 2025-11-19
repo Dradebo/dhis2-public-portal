@@ -137,7 +137,7 @@ export async function getVisualizationConfigs(
     client,
     'visualizations',
     visualizationIds,
-    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
+    ':owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
     5 
   );
 
@@ -163,7 +163,7 @@ export async function getMapsConfig(maps: Visualization[], routeId?: string) {
     client,
     'maps',
     mapIds,
-    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
+    ':owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
     5 
   );
 
@@ -211,7 +211,7 @@ export async function getIndicatorConfigs(indicatorIds: string[], routeId: strin
     client,
     'indicators',
     indicatorIds,
-    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
+    ':owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
     5 
   );
 
@@ -269,7 +269,7 @@ export async function getDataElementConfigs(dataElementIds: string[], routeId?: 
     client,
     'dataElements',
     dataElementIds,
-    ':owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
+    ':owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
     5 
   );
 
