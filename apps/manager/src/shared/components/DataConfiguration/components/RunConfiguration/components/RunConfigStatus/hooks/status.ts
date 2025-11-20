@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useDataEngine } from "@dhis2/app-runtime";
 import { getConfigStatus } from "../../../../../../../services/dataServiceClient";
+import { usePollingControl } from "../../../../../providers/PollingProvider";
 
 export interface QueueStatusResult {
 	queue: string;
@@ -37,6 +38,7 @@ export interface ConfigStatusResponse {
 
 export function useDataConfigRunStatus(id: string) {
 	const engine = useDataEngine();
+	const { isPollingPaused } = usePollingControl();
 	
 	async function fetchStatus(): Promise<ConfigStatusResponse> {
  		const response = await getConfigStatus(engine, id);
@@ -50,8 +52,8 @@ export function useDataConfigRunStatus(id: string) {
 	const { isLoading, data, error, isError } = useQuery({
 		queryKey: ["config-status", id],
 		queryFn: fetchStatus,
-		refetchInterval: 5000,
-		refetchIntervalInBackground: true,
+		refetchInterval: isPollingPaused ? false : 5000,
+		refetchIntervalInBackground: !isPollingPaused,
 		retry: 3,
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
 	});

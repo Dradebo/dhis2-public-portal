@@ -26,7 +26,7 @@ function generateRouteMutation(id: string) {
 	};
 }
 
-export function useCreateDataSource() {
+export function useCreateDataSource(onClose?: () => void) {
 	const refreshList = useRefreshDataSources();
 	const { show } = useAlert(
 		({ message }) => message,
@@ -90,12 +90,14 @@ export function useCreateDataSource() {
 				type: { success: true },
 			});
 			refreshList();
-			navigate({
-				to: "/data-service-configuration/$configId",
-				params: {
-					configId: data.id,
-				},
-			});
+
+			if (onClose) {
+				onClose();
+			} else {
+				navigate({
+					to: "/data-service-configuration",
+				});
+			}
 		} catch (error) {
 			if (error instanceof FetchError) {
 				show({

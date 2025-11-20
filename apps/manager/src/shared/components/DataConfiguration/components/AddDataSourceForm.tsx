@@ -95,7 +95,7 @@ export function AddDataSourceForm({
 			},
 		},
 	});
-	const { save } = useCreateDataSource();
+	const { save } = useCreateDataSource(onClose);
 
 	return (
 		<FormProvider {...form}>

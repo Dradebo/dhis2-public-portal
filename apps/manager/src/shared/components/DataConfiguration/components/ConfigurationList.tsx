@@ -1,6 +1,6 @@
 import { SimpleTable, SimpleTableColumn } from "@hisptz/dhis2-ui";
 import { useDataSources } from "../providers/DataSourcesProvider";
-import React from "react";
+import React, { useEffect } from "react";
 import i18n from "@dhis2/d2-i18n";
 import { RunConfigStatus } from "./RunConfiguration/components/RunConfigStatus/RunConfigStatus";
 import { AddDataSource } from "./AddDataSource";
@@ -28,7 +28,11 @@ const columns: SimpleTableColumn[] = [
 
 export function ConfigurationList() {
 	const configurations = useDataSources();
-	const { routes } = useRoutes();
+	const { routes, refetch: refetchRoutes } = useRoutes();
+
+	useEffect(() => {
+		refetchRoutes();
+	}, [configurations.length, refetchRoutes]);
 
 	const rows = configurations.map((configuration) => {
 		const route = routes.find((r) => r.id === configuration.source.routeId);

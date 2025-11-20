@@ -14,11 +14,14 @@ export interface ApiResponse {
     method: 'create' | 'delete' = 'create'
 ): Promise<ApiResponse> {
     try {
-        const result = await engine.mutate({
+        const mutation: any = {
             type: method,
             resource: `routes/data-service/run${endpoint}`,
-            data: data || {},
-        });
+        };
+         if (method !== 'delete' && data) {
+            mutation.data = data;
+        }
+        const result = await engine.mutate(mutation);
         return result as ApiResponse;
     } catch (error) {
         if (error instanceof Error) {
@@ -60,16 +63,20 @@ export async function startDataDeletion(engine: any, configId: string, data: any
     return executeDataServiceRoute(engine, `/data-delete/${configId}`, data);
 }
  
-export async function validateData(engine: any, configId: string, data: any): Promise<ApiResponse> {
+export async function startDataValidation(engine: any, configId: string, data: any): Promise<ApiResponse> {
     return executeDataServiceRoute(engine, `/data-validation/${configId}`, data);
 }
+
+// export async function fetchDestinationData(engine: any, data: any): Promise<ApiResponse> {
+//     return executeDataServiceRoute(engine, `/data-validation/fetch-destination-data`, data);
+// }
  
 export async function createQueues(engine: any, configId: string): Promise<ApiResponse> {
-    return executeDataServiceRoute(engine, `/queues/${configId}`, { action: 'create' });
+    return executeDataServiceRoute(engine, `/queues/${configId}`);
 }
 
 export async function deleteQueues(engine: any, configId: string): Promise<ApiResponse> {
-    return executeDataServiceRoute(engine, `/queues/${configId}`, {}, 'delete');
+    return executeDataServiceRoute(engine, `/queues/${configId}`, undefined, 'delete');
 } 
 
 export async function getConfigStatus(engine: any, configId: string): Promise<ApiResponse> {
@@ -127,7 +134,7 @@ export async function getFailedQueueSources(engine: any, configId: string): Prom
 }
 
 export async function clearFailedQueue(engine: any, configId: string): Promise<ApiResponse> {
-    return executeDataServiceRoute(engine, `/failed-queue/${configId}`, {}, 'delete');
+    return executeDataServiceRoute(engine, `/failed-queue/${configId}`, undefined, 'delete');
 }
 
 // Retry operations
@@ -143,3 +150,4 @@ export async function retryByProcessType(
 export async function retrySingleMessage(engine: any, configId: string, messageId: string): Promise<ApiResponse> {
     return executeDataServiceRoute(engine, `/retry/${configId}/message/${messageId}`, {});
 }
+

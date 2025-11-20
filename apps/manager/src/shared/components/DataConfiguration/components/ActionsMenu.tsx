@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
 	Button,
 	IconMore24,
@@ -20,6 +20,7 @@ import { useDeleteDataSource } from "../hooks/save";
 import { useBoolean } from "usehooks-ts";
 import { RunConfigForm } from "./RunConfiguration/components/RunConfigForm/RunConfigForm";
 import { RunConfigSummaryModal } from "./RunConfiguration/components/RunConfigSummary/components/RunConfigSummaryModal";
+import { usePollingControl } from "../providers/PollingProvider";
 
 export function ActionsMenu({ config }: { config: DataServiceConfig }) {
 	const [isOpen, setIsOpen] = useState(false);
@@ -29,6 +30,7 @@ export function ActionsMenu({ config }: { config: DataServiceConfig }) {
 	});
 	const { confirm } = useDialog();
 	const { deleteConfig } = useDeleteDataSource();
+	const { pausePolling, resumePolling } = usePollingControl();
 
 	const {
 		value: hideRunModal,
@@ -54,13 +56,33 @@ export function ActionsMenu({ config }: { config: DataServiceConfig }) {
 
 	const handleRun = () => {
 		setIsOpen(false);
+		pausePolling();
 		onShowRunModal();
+	};
+
+	const handleCloseRunModal = () => {
+		resumePolling();
+		onCloseRunModal();
 	};
 
 	const handleViewOverview = () => {
 		setIsOpen(false);
+		pausePolling();
 		onShowSummaryModal();
 	};
+
+	const handleCloseSummaryModal = () => {
+		resumePolling();
+		onCloseSummaryModal();
+	};
+
+ 	useEffect(() => {
+		return () => {
+			if (!hideRunModal || !hideSummaryModal) {
+				resumePolling();
+			}
+		};
+	}, [hideRunModal, hideSummaryModal, resumePolling]);
 
 	const handleDelete = () => {
 		setIsOpen(false);
@@ -87,13 +109,13 @@ export function ActionsMenu({ config }: { config: DataServiceConfig }) {
 				<RunConfigForm
 					config={config}
 					hide={hideRunModal}
-					onClose={onCloseRunModal}
+					onClose={handleCloseRunModal}
 				/>
 			)}
 			{!hideSummaryModal && (
 				<RunConfigSummaryModal
 					hide={hideSummaryModal}
-					onClose={onCloseSummaryModal}
+					onClose={handleCloseSummaryModal}
 					config={config}
 				/>
 			)}
@@ -116,7 +138,7 @@ export function ActionsMenu({ config }: { config: DataServiceConfig }) {
 				>
 					<Menu>
 						<MenuItem
-							label={i18n.t("Edit connenction")}
+							label={i18n.t("Edit configuration")}
 							icon={<IconEdit16 />}
 							onClick={handleEdit}
 						/>
