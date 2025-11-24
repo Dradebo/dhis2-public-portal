@@ -132,7 +132,7 @@ export function FailedQueueModal({
     };
 
     return (
-        <Modal large hide={!isOpen} onClose={onClose}>
+        <Modal large hide={!isOpen} onClose={onClose} position="middle">
             <ModalTitle>
                 <div className="flex items-center gap-2">
                     {processType ?

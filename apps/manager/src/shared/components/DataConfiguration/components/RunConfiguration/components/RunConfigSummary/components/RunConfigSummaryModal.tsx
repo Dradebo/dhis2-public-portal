@@ -18,10 +18,12 @@ export function RunConfigSummaryModal({
 	hide,
 	onClose,
 	config,
+	onOpenFailedModal,
 }: {
 	hide: boolean;
 	onClose: () => void;
 	config: DataServiceConfig;
+	onOpenFailedModal?: (processType: string) => void;
 }) {
 	const { status } = useDataConfigRunStatus(config.id);
 	return (
@@ -47,7 +49,7 @@ export function RunConfigSummaryModal({
 								</div>
 							}
 						>
-							<RunConfigSummaryDetails config={config} />
+							<RunConfigSummaryDetails config={config} onCloseParent={onClose} onOpenFailedModal={onOpenFailedModal} />
 						</Suspense>
 					</div>
 				</div>

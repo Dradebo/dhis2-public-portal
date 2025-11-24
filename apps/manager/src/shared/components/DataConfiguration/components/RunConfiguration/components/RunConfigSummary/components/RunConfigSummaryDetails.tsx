@@ -14,8 +14,12 @@ import { ProcessSection } from "./ProcessSection";
 
 export function RunConfigSummaryDetails({
     config,
+    onCloseParent,
+    onOpenFailedModal,
 }: {
     config: DataServiceConfig;
+    onCloseParent?: () => void;
+    onOpenFailedModal?: (processType: string) => void;
 }) {
     const [activeTab, setActiveTab] = useState<"metadata" | "data" | "deletion">("metadata");
     const [showFailedModal, setShowFailedModal] = useState(false);
@@ -50,10 +54,17 @@ export function RunConfigSummaryDetails({
             </div>
         );
     }
- 
+
     const handleFailedClick = (processType: string) => {
-        setSelectedProcessType(processType);
-        setShowFailedModal(true);
+        if (onOpenFailedModal) {
+            onOpenFailedModal(processType);
+        } else {
+            setSelectedProcessType(processType);
+            setShowFailedModal(true);
+            if (onCloseParent) {
+                onCloseParent();
+            }
+        }
     };
 
     const handleCloseModal = () => {
@@ -130,12 +141,14 @@ export function RunConfigSummaryDetails({
                 </div>
             )}
 
-            <FailedQueueModal
-                configId={config.id}
-                isOpen={showFailedModal}
-                onClose={handleCloseModal}
-                processType={selectedProcessType}
-            />
+            {!onOpenFailedModal && (
+                <FailedQueueModal
+                    configId={config.id}
+                    isOpen={showFailedModal}
+                    onClose={handleCloseModal}
+                    processType={selectedProcessType}
+                />
+            )}
         </div>
     );
 }
