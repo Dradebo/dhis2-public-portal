@@ -7,7 +7,6 @@ import {
 	MenuItem,
 	Divider,
 	IconEdit16,
-	IconLaunch16,
 	IconTerminalWindow16,
 	IconDelete16,
 	IconImportItems24,
@@ -20,6 +19,7 @@ import { useDeleteDataSource } from "../hooks/save";
 import { useBoolean } from "usehooks-ts";
 import { RunConfigForm } from "./RunConfiguration/components/RunConfigForm/RunConfigForm";
 import { RunConfigSummaryModal } from "./RunConfiguration/components/RunConfigSummary/components/RunConfigSummaryModal";
+import { FailedQueueModal } from "./RunConfiguration/components/RunConfigSummary/components/FailedQueueModal";
 import { usePollingControl } from "../providers/PollingProvider";
 
 export function ActionsMenu({ config }: { config: DataServiceConfig }) {
@@ -43,6 +43,14 @@ export function ActionsMenu({ config }: { config: DataServiceConfig }) {
 		setTrue: onCloseSummaryModal,
 		setFalse: onShowSummaryModal,
 	} = useBoolean(true);
+
+	const {
+		value: hideFailedModal,
+		setTrue: onCloseFailedModal,
+		setFalse: onShowFailedModal,
+	} = useBoolean(true);
+
+	const [selectedProcessType, setSelectedProcessType] = useState<string | undefined>(undefined);
 
 	const handleEdit = () => {
 		setIsOpen(false);
@@ -76,13 +84,26 @@ export function ActionsMenu({ config }: { config: DataServiceConfig }) {
 		onCloseSummaryModal();
 	};
 
- 	useEffect(() => {
+	const handleOpenFailedModal = (processType: string) => {
+		setSelectedProcessType(processType);
+		pausePolling();
+		onCloseSummaryModal();
+		onShowFailedModal();
+	};
+
+	const handleCloseFailedModal = () => {
+		onCloseFailedModal();
+		setSelectedProcessType(undefined);
+		resumePolling();
+	};
+
+	useEffect(() => {
 		return () => {
-			if (!hideRunModal || !hideSummaryModal) {
+			if (!hideRunModal || !hideSummaryModal || !hideFailedModal) {
 				resumePolling();
 			}
 		};
-	}, [hideRunModal, hideSummaryModal, resumePolling]);
+	}, [hideRunModal, hideSummaryModal, hideFailedModal, resumePolling]);
 
 	const handleDelete = () => {
 		setIsOpen(false);
@@ -117,6 +138,15 @@ export function ActionsMenu({ config }: { config: DataServiceConfig }) {
 					hide={hideSummaryModal}
 					onClose={handleCloseSummaryModal}
 					config={config}
+					onOpenFailedModal={handleOpenFailedModal}
+				/>
+			)}
+			{!hideFailedModal && (
+				<FailedQueueModal
+					configId={config.id}
+					isOpen={!hideFailedModal}
+					onClose={handleCloseFailedModal}
+					processType={selectedProcessType}
 				/>
 			)}
 
@@ -132,8 +162,8 @@ export function ActionsMenu({ config }: { config: DataServiceConfig }) {
 			{isOpen && (
 				<Popover
 					reference={buttonRef as any}
-                    arrow={false}
- 					placement="bottom-start"
+					arrow={false}
+					placement="bottom-start"
 					onClickOutside={() => setIsOpen(false)}
 				>
 					<Menu>
