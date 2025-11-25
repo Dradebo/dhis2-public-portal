@@ -19,7 +19,9 @@ import {
     Pagination
 } from "@dhis2/ui";
 import i18n from "@dhis2/d2-i18n";
+import { useAlert } from "@dhis2/app-runtime";
 import { useFailedQueueDetails } from "../hooks/failed-queue";
+import { usePollingControl } from "../../../../../providers/PollingProvider";
 
 
 // Helper function to map queue names to process types
@@ -55,9 +57,12 @@ function filterMessagesByProcessType(messages: any[], processType?: string): any
     const queuePattern = getQueuePatternFromProcessType(processType);
     if (!queuePattern) return messages;
 
-    return messages.filter(message =>
-        message.sourceQueue && message.sourceQueue.toLowerCase().includes(queuePattern)
-    );
+    return messages.filter(message => {
+        if (!message.sourceQueue) return false;
+        const queueLower = message.sourceQueue.toLowerCase();
+        return queueLower.includes(queuePattern) &&
+            getProcessTypeFromQueue(message.sourceQueue) === processType;
+    });
 }
 
 interface FailedQueueModalProps {
@@ -76,13 +81,24 @@ export function FailedQueueModal({
     const [selectedMessage, setSelectedMessage] = useState<any>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(50);
+    const [retryingMessageId, setRetryingMessageId] = useState<string | null>(null);
+    const { pausePolling, resumePolling } = usePollingControl();
+
+    const { show } = useAlert(
+        ({ message }) => message,
+        ({ type }) => ({ ...type, duration: 3000 })
+    );
 
     useEffect(() => {
         if (isOpen) {
+            pausePolling();
             setCurrentPage(1);
             setSelectedMessage(null);
+            setRetryingMessageId(null);
+        } else {
+            resumePolling();
         }
-    }, [isOpen, processType]);
+    }, [isOpen, processType, pausePolling, resumePolling]);
 
     const offset = (currentPage - 1) * pageSize;
 
@@ -90,12 +106,12 @@ export function FailedQueueModal({
         failedMessages,
         isLoading,
         clearFailedQueue,
+        isClearingQueue,
         isError,
         error,
         retryByProcessType,
         isRetryingByType,
         retrySingleMessage,
-        isRetryingSingle
     } = useFailedQueueDetails(configId, {
         includeMessages: true,
         limit: pageSize,
@@ -107,7 +123,22 @@ export function FailedQueueModal({
         [];
 
     const handleClearQueue = async () => {
-        await clearFailedQueue();
+        try {
+            clearFailedQueue();
+            onClose();
+            show({
+                message: i18n.t('Failed queue cleared successfully'),
+                type: { success: true }
+            });
+        } catch (error) {
+            console.error('Failed to clear queue:', error);
+            show({
+                message: i18n.t('Failed to clear queue: {{error}}', {
+                    error: error instanceof Error ? error.message : String(error)
+                }),
+                type: { critical: true }
+            });
+        }
     };
 
     const handleRetryByProcessType = async () => {
@@ -127,8 +158,24 @@ export function FailedQueueModal({
     };
 
     const handleRetrySingle = async (messageId: string) => {
-        console.log("Retrying single message:", messageId);
-        await retrySingleMessage(messageId);
+        try {
+            setRetryingMessageId(messageId);
+            await retrySingleMessage(messageId);
+            show({
+                message: i18n.t('Message retried successfully'),
+                type: { success: true }
+            });
+        } catch (error) {
+            console.error('Failed to retry message:', error);
+            show({
+                message: i18n.t('Failed to retry message: {{error}}', {
+                    error: error instanceof Error ? error.message : String(error)
+                }),
+                type: { critical: true }
+            });
+        } finally {
+            setRetryingMessageId(null);
+        }
     };
 
     return (
@@ -216,8 +263,8 @@ export function FailedQueueModal({
                                                                     <Button
                                                                         small
                                                                         secondary
-                                                                        loading={isRetryingSingle}
-                                                                        disabled={isRetryingSingle || isLoading}
+                                                                        loading={retryingMessageId === msg.messageId}
+                                                                        disabled={retryingMessageId !== null || isLoading}
                                                                         onClick={() => handleRetrySingle(msg.messageId)}
                                                                         icon={<IconSync16 />}
                                                                     >
@@ -414,7 +461,7 @@ export function FailedQueueModal({
                                         secondary
                                         onClick={handleRetryByProcessType}
                                         loading={isRetryingByType}
-                                        disabled={isRetryingByType || isLoading}
+                                        disabled={isRetryingByType || isLoading || retryingMessageId !== null}
                                     >
                                         {isRetryingByType ? i18n.t('Retrying...') : i18n.t('Retry All')}
                                     </Button>
@@ -423,8 +470,10 @@ export function FailedQueueModal({
                                     destructive
                                     secondary
                                     onClick={handleClearQueue}
+                                    loading={isClearingQueue}
+                                    disabled={isClearingQueue || isLoading || retryingMessageId !== null}
                                 >
-                                    {i18n.t('Clear All')}
+                                    {isClearingQueue ? i18n.t('Clearing...') : i18n.t('Clear All')}
                                 </Button>
                             </ButtonStrip>
                         </>

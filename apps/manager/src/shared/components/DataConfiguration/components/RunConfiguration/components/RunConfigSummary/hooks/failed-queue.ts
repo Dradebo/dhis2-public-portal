@@ -70,7 +70,8 @@ export function useFailedQueueDetails(configId: string, options: {
 		},
 		enabled: !!configId,
 		refetchInterval: 10000,
-	}); const clearMutation = useMutation({
+	});
+	 const clearMutation = useMutation({
 		mutationFn: async () => {
 			const response = await clearFailedQueue(engine, configId);
 			if (!response.success) {
@@ -121,7 +122,7 @@ export function useFailedQueueDetails(configId: string, options: {
 		isClearingQueue: clearMutation.isPending,
 		retryByProcessType: retryByTypeMutation.mutate,
 		isRetryingByType: retryByTypeMutation.isPending,
-		retrySingleMessage: retrySingleMutation.mutate,
+		retrySingleMessage: retrySingleMutation.mutateAsync,
 		isRetryingSingle: retrySingleMutation.isPending,
 	};
 }
