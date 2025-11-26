@@ -23,7 +23,9 @@ import { RHFCheckboxField, RHFSingleSelectField } from "@hisptz/dhis2-ui";
 import { RHFNumberField } from "../../../../../Fields/RHFNumberField";
 import { RHFMultiSelectField } from "../../../../../Fields/RHFMultiSelectField";
 import { SourceMetadataSelector } from "./components/SourceMetadataSelector";
-import { downloadMetadata, downloadData, validateData, startDataDeletion } from "../../../../../../services/dataServiceClient";
+import { downloadMetadata, downloadData, startDataDeletion } from "../../../../../../services/dataServiceClient";
+import { useNavigate } from "@tanstack/react-router";
+import { useStartValidation } from "../../../../../DataConfiguration/components/Validationlogs/hooks/validation";
 
 const runConfigSchema = z.object({
 	service: z.enum([
@@ -37,7 +39,9 @@ const runConfigSchema = z.object({
 	selectedVisualizations: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
 	selectedMaps: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
 	selectedDashboards: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
-	runtimeConfig: dataServiceRuntimeConfig,
+	runtimeConfig: dataServiceRuntimeConfig.extend({
+		periods: z.array(z.string()).optional(),
+	}),
 	dataItemsConfigIds: z.array(z.string()).min(1, i18n.t("")),
 });
 
@@ -54,6 +58,10 @@ export function RunConfigForm({
 }) {
 	const queryClient = useQueryClient();
 	const engine = useDataEngine();
+	const navigate = useNavigate({
+		from: "/data-service-configuration/",
+	});
+	const startValidation = useStartValidation(config.id, config);
 	const { show } = useAlert(
 		({ message }) => message,
 		({ type }) => ({ ...type, duration: 3000 }),
@@ -70,6 +78,7 @@ export function RunConfigForm({
 				pageSize: 10,
 				paginateByData: false,
 				timeout: 1000 * 60 * 5,
+				periods: [],
 			},
 			dataItemsConfigIds: [],
 		},
@@ -104,7 +113,44 @@ export function RunConfigForm({
 					runtimeConfig: data.runtimeConfig,
 				};
 
-				result = await validateData(engine, config.id, validationRequest);
+ 				const selectedPeriods = data.runtimeConfig.periods || [];
+				if (selectedPeriods.length === 0) {
+					show({
+						message: i18n.t('Please select at least one period for validation'),
+						type: { critical: true }
+					});
+					return;
+				}
+
+ 				const selectedConfigs = config.itemsConfig.filter(item => 
+					data.dataItemsConfigIds.includes(item.id)
+				);
+
+ 				const allDataElements = selectedConfigs.flatMap(configItem => 
+					configItem.dataItems.map(dataItem => dataItem.id)
+				);
+				const allOrgUnits = selectedConfigs.map(configItem => configItem.parentOrgUnitId);
+
+				// Store comprehensive validation parameters for re-run functionality
+				const fullValidationData = {
+					...validationRequest,
+					periods: selectedPeriods,
+					dataElements: allDataElements,
+					orgUnits: allOrgUnits,
+					configDetails: selectedConfigs.map(item => ({
+						id: item.id,
+						name: item.name,
+						type: item.type,
+						periodTypeId: item.periodTypeId,
+						dataItemsCount: item.dataItems.length,
+						parentOrgUnitId: item.parentOrgUnitId,
+						orgUnitLevel: item.orgUnitLevel
+					}))
+				};
+
+				localStorage.setItem(`validation-params-${config.id}`, JSON.stringify(fullValidationData));
+
+				result = await startValidation.mutateAsync(validationRequest);
 			} else {
 
 				const dataRequest = {
@@ -122,13 +168,24 @@ export function RunConfigForm({
 			let successMessage = result.message || i18n.t("Service started successfully");
 			if (data.service === "data-deletion") {
 				successMessage = i18n.t("Data deletion process started successfully. Check the queue for progress.");
+			} else if (data.service === "data-validation") {
+				successMessage = i18n.t("Data validation process started successfully. Redirecting to validation logs...");
 			}
 
 			show({
 				message: successMessage,
 				type: { success: true },
 			});
-			onClose();
+
+			// Navigate to validation logs page if this is a validation service
+			if (data.service === "data-validation") {
+				onClose();
+				navigate({
+					to: `${config.id}/validation-logs`,
+				});
+			} else {
+				onClose();
+			}
 		} catch (error) {
 			console.error(error);
 			let errorMessage = i18n.t("Failed to start service");
