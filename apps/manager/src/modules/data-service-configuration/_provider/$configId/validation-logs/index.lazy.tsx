@@ -14,7 +14,7 @@ function RouteComponent() {
     const { configId } = Route.useParams();
     
     return (
-        <ModuleContainer title={i18n.t("Data Validation Logs")}>
+        <ModuleContainer title="">
             <ValidationLogsPage configId={configId} />
         </ModuleContainer>
     );

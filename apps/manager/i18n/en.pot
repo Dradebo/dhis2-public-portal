@@ -5,8 +5,8 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"POT-Creation-Date: 2025-11-24T07:34:14.266Z\n"
-"PO-Revision-Date: 2025-11-24T07:34:14.266Z\n"
+"POT-Creation-Date: 2025-11-26T10:09:43.209Z\n"
+"PO-Revision-Date: 2025-11-26T10:09:43.209Z\n"
 
 msgid "Could not get Appearance configurations"
 msgstr "Could not get Appearance configurations"
@@ -472,6 +472,12 @@ msgstr "Unknown error"
 msgid "View service overview"
 msgstr "View service overview"
 
+msgid "Failed queue cleared successfully"
+msgstr "Failed queue cleared successfully"
+
+msgid "Message retried successfully"
+msgstr "Message retried successfully"
+
 msgid "Failed {{processType}} Details"
 msgstr "Failed {{processType}} Details"
 
@@ -519,6 +525,9 @@ msgstr "Retrying..."
 
 msgid "Retry All"
 msgstr "Retry All"
+
+msgid "Clearing..."
+msgstr "Clearing..."
 
 msgid "Clear All"
 msgstr "Clear All"
@@ -616,8 +625,24 @@ msgstr "Failed to load validation status"
 msgid "An error occurred while loading the validation status"
 msgstr "An error occurred while loading the validation status"
 
-msgid "Re-run"
-msgstr "Re-run"
+msgid "Destination Analytics Information"
+msgstr "Destination Analytics Information"
+
+msgid "Loading analytics information..."
+msgstr "Loading analytics information..."
+
+msgid "Analytics Information"
+msgstr "Analytics Information"
+
+msgid ""
+"Unable to retrieve destination analytics information. Validation results "
+"may not reflect the most recent data."
+msgstr ""
+"Unable to retrieve destination analytics information. Validation results "
+"may not reflect the most recent data."
+
+msgid "Re-run validation"
+msgstr "Re-run validation"
 
 msgid "Validation Logs"
 msgstr "Validation Logs"
