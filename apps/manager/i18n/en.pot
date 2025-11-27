@@ -5,8 +5,8 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"POT-Creation-Date: 2025-11-26T10:09:43.209Z\n"
-"PO-Revision-Date: 2025-11-26T10:09:43.209Z\n"
+"POT-Creation-Date: 2025-11-27T12:06:13.925Z\n"
+"PO-Revision-Date: 2025-11-27T12:06:13.926Z\n"
 
 msgid "Could not get Appearance configurations"
 msgstr "Could not get Appearance configurations"
@@ -19,12 +19,6 @@ msgstr "Import/Export Configuration"
 
 msgid "Back"
 msgstr "Back"
-
-msgid "Data Validation Logs"
-msgstr "Data Validation Logs"
-
-msgid "Generated Report"
-msgstr "Generated Report"
 
 msgid "Data service configuration"
 msgstr "Data service configuration"
@@ -586,6 +580,9 @@ msgstr "No discrepancies found"
 msgid "Great! No discrepancies were found between the source and destination data."
 msgstr "Great! No discrepancies were found between the source and destination data."
 
+msgid "Download"
+msgstr "Download"
+
 msgid "Period"
 msgstr "Period"
 
@@ -624,22 +621,6 @@ msgstr "Failed to load validation status"
 
 msgid "An error occurred while loading the validation status"
 msgstr "An error occurred while loading the validation status"
-
-msgid "Destination Analytics Information"
-msgstr "Destination Analytics Information"
-
-msgid "Loading analytics information..."
-msgstr "Loading analytics information..."
-
-msgid "Analytics Information"
-msgstr "Analytics Information"
-
-msgid ""
-"Unable to retrieve destination analytics information. Validation results "
-"may not reflect the most recent data."
-msgstr ""
-"Unable to retrieve destination analytics information. Validation results "
-"may not reflect the most recent data."
 
 msgid "Re-run validation"
 msgstr "Re-run validation"
