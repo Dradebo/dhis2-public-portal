@@ -1,3 +1,5 @@
+import { useQueryClient } from "@tanstack/react-query";
+
 export interface ApiResponse {
     success: boolean;
     message: string;
@@ -14,14 +16,14 @@ export interface ApiResponse {
     method: 'create' | 'delete' = 'create'
 ): Promise<ApiResponse> {
     try {
-        const mutation: any = {
+        const mutationConfig: any = {
             type: method,
             resource: `routes/data-service/run${endpoint}`,
         };
-         if (method !== 'delete' && data) {
-            mutation.data = data;
+        if (method !== 'delete' && data !== undefined) {
+            mutationConfig.data = data;
         }
-        const result = await engine.mutate(mutation);
+        const result = await engine.mutate(mutationConfig);
         return result as ApiResponse;
     } catch (error) {
         if (error instanceof Error) {
@@ -52,31 +54,70 @@ export async function queryDataServiceRoute(
 }
 
 export async function downloadMetadata(engine: any, configId: string, data: any): Promise<ApiResponse> {
-    return executeDataServiceRoute(engine, `/metadata-download/${configId}`, data);
+     const queryParams = new URLSearchParams();
+    
+    if (data.metadataSource) {
+        queryParams.set('metadataSource', data.metadataSource);
+    }
+    
+    if (data.selectedVisualizations && Array.isArray(data.selectedVisualizations) && data.selectedVisualizations.length > 0) {
+        queryParams.set('selectedVisualizations', JSON.stringify(data.selectedVisualizations));
+    }
+    
+    if (data.selectedMaps && Array.isArray(data.selectedMaps) && data.selectedMaps.length > 0) {
+        queryParams.set('selectedMaps', JSON.stringify(data.selectedMaps));
+    }
+    
+    if (data.selectedDashboards && Array.isArray(data.selectedDashboards) && data.selectedDashboards.length > 0) {
+        queryParams.set('selectedDashboards', JSON.stringify(data.selectedDashboards));
+    }
+    
+    const endpoint = `/metadata-download/${configId}?${queryParams.toString()}`;
+    console.log('Metadata download endpoint with query params:', endpoint);
+    
+    return queryDataServiceRoute(engine, endpoint);
 }
 
 export async function downloadData(engine: any, configId: string, data: any): Promise<ApiResponse> {
-    return executeDataServiceRoute(engine, `/data-download/${configId}`, data);
+    const queryParams = new URLSearchParams();
+    
+    if (data.dataItemsConfigIds && Array.isArray(data.dataItemsConfigIds)) {
+        queryParams.set('dataItemsConfigIds', JSON.stringify(data.dataItemsConfigIds));
+    }
+    
+    if (data.runtimeConfig) {
+        queryParams.set('runtimeConfig', JSON.stringify(data.runtimeConfig));
+    }
+    
+    const endpoint = `/data-download/${configId}?${queryParams.toString()}`;
+    console.log('Data download endpoint with query params:', endpoint);
+    
+    return queryDataServiceRoute(engine, endpoint);
 }
 
 export async function startDataDeletion(engine: any, configId: string, data: any): Promise<ApiResponse> {
-    return executeDataServiceRoute(engine, `/data-delete/${configId}`, data);
-}
- 
-export async function startDataValidation(engine: any, configId: string, data: any): Promise<ApiResponse> {
-    return executeDataServiceRoute(engine, `/data-validation/${configId}`, data);
+    const queryParams = new URLSearchParams();
+    
+    if (data.dataItemsConfigIds && Array.isArray(data.dataItemsConfigIds)) {
+        queryParams.set('dataItemsConfigIds', JSON.stringify(data.dataItemsConfigIds));
+    }
+    
+    if (data.runtimeConfig) {
+        queryParams.set('runtimeConfig', JSON.stringify(data.runtimeConfig));
+    }
+    
+    const endpoint = `/data-delete/${configId}?${queryParams.toString()}`;
+    console.log('Data deletion endpoint with query params:', endpoint);
+    
+    return queryDataServiceRoute(engine, endpoint);
 }
 
-// export async function fetchDestinationData(engine: any, data: any): Promise<ApiResponse> {
-//     return executeDataServiceRoute(engine, `/data-validation/fetch-destination-data`, data);
-// }
- 
 export async function createQueues(engine: any, configId: string): Promise<ApiResponse> {
-    return executeDataServiceRoute(engine, `/queues/${configId}`);
+    return executeDataServiceRoute(engine, `/queues/${configId}` );
 }
 
 export async function deleteQueues(engine: any, configId: string): Promise<ApiResponse> {
-    return executeDataServiceRoute(engine, `/queues/${configId}`, undefined, 'delete');
+    return executeDataServiceRoute(engine, `/queues/${configId}`, {}, 'delete');
 } 
 
 export async function getConfigStatus(engine: any, configId: string): Promise<ApiResponse> {
@@ -144,10 +185,14 @@ export async function retryByProcessType(
     processType: 'data-upload' | 'metadata-upload' | 'data-download' | 'metadata-download' | 'data-delete',
     maxRetries: number = 10
 ): Promise<ApiResponse> {
-    return executeDataServiceRoute(engine, `/retry/${configId}`, { maxRetries });
+     const queryParams = new URLSearchParams({
+        retryType: 'process-type',
+        processType,
+        maxRetries: maxRetries.toString()
+    });
+    return queryDataServiceRoute(engine, `/retry/${configId}?${queryParams.toString()}`);
 }
 
 export async function retrySingleMessage(engine: any, configId: string, messageId: string): Promise<ApiResponse> {
-    return executeDataServiceRoute(engine, `/retry/${configId}/message/${messageId}`, {});
+    return executeDataServiceRoute(engine, `/retry/${configId}/message/${messageId}`, undefined);
 }
-
