@@ -113,7 +113,8 @@ export function RunConfigForm({
 					runtimeConfig: data.runtimeConfig,
 				};
 
- 				const selectedPeriods = data.runtimeConfig.periods || [];
+				// Get selected periods from form
+				const selectedPeriods = data.runtimeConfig.periods || [];
 				if (selectedPeriods.length === 0) {
 					show({
 						message: i18n.t('Please select at least one period for validation'),
@@ -122,11 +123,13 @@ export function RunConfigForm({
 					return;
 				}
 
- 				const selectedConfigs = config.itemsConfig.filter(item => 
+				// Get selected config items details
+				const selectedConfigs = config.itemsConfig.filter(item => 
 					data.dataItemsConfigIds.includes(item.id)
 				);
 
- 				const allDataElements = selectedConfigs.flatMap(configItem => 
+				// Extract all data elements and org units from selected configs
+				const allDataElements = selectedConfigs.flatMap(configItem => 
 					configItem.dataItems.map(dataItem => dataItem.id)
 				);
 				const allOrgUnits = selectedConfigs.map(configItem => configItem.parentOrgUnitId);
