@@ -103,6 +103,129 @@ async function retryMessage(message: any, configId: string): Promise<{ success: 
     }
 }
 
+export const GET: Operation = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const { id: configId } = req.params;
+        
+        // Read parameters from query string
+        const maxRetriesParam = req.query.maxRetries as string;
+        let maxRetries = 10;
+        
+        if (maxRetriesParam) {
+            const parsed = parseInt(maxRetriesParam, 10);
+            if (isNaN(parsed) || parsed < 1 || parsed > 1000) {
+                return res.status(400).json({
+                    error: 'Invalid maxRetries parameter',
+                    message: 'maxRetries must be an integer between 1 and 1000'
+                });
+            }
+            maxRetries = parsed;
+        }
+        
+        const retryType = req.query.retryType as string || 'all';
+        const processType = req.query.processType as string;
+
+        if (!configId) {
+            return res.status(400).json({
+                error: 'Configuration ID is required',
+                message: 'Please provide a valid configuration ID in the URL parameters'
+            });
+        }
+
+        logger.info(`Retry request received for config: ${configId}`, { maxRetries, retryType, processType });
+
+        // Get and consume failed messages
+        const failedMessages = await consumeFailedMessagesFromRabbitMQ(configId, maxRetries);
+        
+        // Filter messages by process type if specified
+        let messagesToRetry = failedMessages;
+        if (retryType === 'process-type' && processType) {
+            messagesToRetry = failedMessages.filter(message => {
+                const headers = message.properties?.headers || {};
+                const xDeath = headers['x-death'];
+                
+                if (xDeath && Array.isArray(xDeath) && xDeath.length > 0) {
+                    const sourceQueue = xDeath[0].queue;
+                    if (sourceQueue) {
+                        // Match process type to queue name pattern
+                        const queueLower = sourceQueue.toLowerCase();
+                        const processTypeLower = processType.toLowerCase();
+                        return queueLower.includes(processTypeLower.replace('-', '-'));
+                    }
+                }
+                return false;
+            });
+            
+            logger.info(`Filtered messages by process type '${processType}': ${messagesToRetry.length}/${failedMessages.length} messages`);
+        }
+        
+        if (messagesToRetry.length === 0) {
+            return res.json({
+                success: true,
+                message: retryType === 'process-type' && processType ? 
+                    `No failed messages found for process type '${processType}'` : 
+                    'No failed messages to retry',
+                configId,
+                results: {
+                    totalAttempted: 0,
+                    successfulRetries: 0,
+                    failedRetries: 0,
+                }
+            });
+        }
+
+        // Retry each message
+        let successfulRetries = 0;
+        let failedRetries = 0;
+        const retryResults = [];
+
+        for (const message of messagesToRetry) {
+            const result = await retryMessage(message, configId);
+            if (result.success) {
+                successfulRetries++;
+            } else {
+                failedRetries++;
+            }
+            
+            retryResults.push({
+                success: result.success,
+                error: result.error
+            });
+        }
+
+        logger.info(`Retry operation completed for config: ${configId}`, {
+            totalAttempted: messagesToRetry.length,
+            successfulRetries,
+            failedRetries,
+        });
+
+        res.json({
+            success: successfulRetries > 0,
+            message: `Retry operation completed. ${successfulRetries}/${messagesToRetry.length} messages retried successfully.`,
+            configId,
+            results: {
+                totalAttempted: messagesToRetry.length,
+                successfulRetries,
+                failedRetries,
+                details: retryResults,
+            },
+        });
+
+    } catch (error: any) {
+        logger.error(`Error in retry endpoint for config ${req.params.id}:`, error);
+        
+        res.status(500).json({
+            error: 'Retry operation failed',
+            message: error.message || 'An unexpected error occurred during retry operation',
+            configId: req.params.id
+        });
+    }
+};
+
 export const POST: Operation = async (
     req: Request,
     res: Response,
@@ -110,7 +233,10 @@ export const POST: Operation = async (
 ) => {
     try {
         const { id: configId } = req.params;
-        const { maxRetries = 10 } = req.body;
+        
+        const maxRetries = parseInt(req.query.maxRetries as string) || req.body?.maxRetries || 10;
+        const retryType = req.query.retryType as string || req.body?.retryType || 'all';
+        const processType = req.query.processType as string || req.body?.processType;
 
         if (!configId) {
             return res.status(400).json({
@@ -186,6 +312,82 @@ export const POST: Operation = async (
 };
 
 // API Documentation
+GET.apiDoc = {
+    summary: "Retry failed operations for a configuration using query parameters",
+    description: "Retry failed queue operations using query parameters (compatible with DHIS2 routes)",
+    operationId: "retryFailedOperationsGet",
+    tags: ["RETRY"],
+    parameters: [
+        {
+            in: "path",
+            name: "id",
+            required: true,
+            schema: { type: "string" },
+            description: "Configuration ID"
+        },
+        {
+            in: "query",
+            name: "retryType",
+            schema: { 
+                type: "string",
+                enum: ["all", "specific", "process-type", "custom"],
+                default: "all"
+            },
+            description: "Type of retry operation to perform"
+        },
+        {
+            in: "query",
+            name: "processType",
+            schema: { 
+                type: "string",
+                enum: ["data-upload", "metadata-upload", "data-download", "metadata-download"]
+            },
+            description: "Process type to retry (required for retryType='process-type')"
+        },
+        {
+            in: "query",
+            name: "maxRetries",
+            schema: { 
+                type: "string",
+                default: "10",
+                pattern: "^[1-9][0-9]*$"
+            },
+            description: "Maximum number of messages to retry (1-1000)"
+        }
+    ],
+    responses: {
+        "200": {
+            description: "Retry operation completed",
+            content: {
+                "application/json": {
+                    schema: {
+                        type: "object",
+                        properties: {
+                            success: { type: "boolean" },
+                            message: { type: "string" },
+                            configId: { type: "string" },
+                            results: {
+                                type: "object",
+                                properties: {
+                                    totalAttempted: { type: "integer" },
+                                    successfulRetries: { type: "integer" },
+                                    failedRetries: { type: "integer" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "400": {
+            description: "Bad request - invalid parameters"
+        },
+        "500": {
+            description: "Internal server error during retry operation"
+        }
+    }
+};
+
 POST.apiDoc = {
     summary: "Retry failed operations for a configuration",
     description: "Retry failed queue operations based on different criteria",
