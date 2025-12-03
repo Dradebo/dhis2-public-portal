@@ -124,5 +124,6 @@ export function useFailedQueueDetails(configId: string, options: {
 		isRetryingByType: retryByTypeMutation.isPending,
 		retrySingleMessage: retrySingleMutation.mutateAsync,
 		isRetryingSingle: retrySingleMutation.isPending,
+		refetch: query.refetch,
 	};
 }

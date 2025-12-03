@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 
 export interface ApiResponse {
     success: boolean;
@@ -7,6 +6,16 @@ export interface ApiResponse {
     filesDeleted?: number;
     totalSizeDeleted?: string;
     queues?: string[];
+}
+
+function isVersion42OrHigher(serverVersion?: any): boolean {
+    if (!serverVersion) return false;
+    const minor = serverVersion.minor || 0;
+    const major = serverVersion.major || 0;
+    if (major >= 2 && minor >= 42) return true;
+    if (major >= 3) return true;
+    
+    return false;
 }
 
  export async function executeDataServiceRoute(
@@ -53,63 +62,86 @@ export async function queryDataServiceRoute(
     }
 }
 
-export async function downloadMetadata(engine: any, configId: string, data: any): Promise<ApiResponse> {
-     const queryParams = new URLSearchParams();
+export async function downloadMetadata(engine: any, configId: string, data: any, serverVersion?: any): Promise<ApiResponse> {
+    const useQueryParams = isVersion42OrHigher(serverVersion);
     
-    if (data.metadataSource) {
-        queryParams.set('metadataSource', data.metadataSource);
+    if (useQueryParams) {
+        const queryParams = new URLSearchParams();
+        
+        if (data.metadataSource) {
+            queryParams.set('metadataSource', data.metadataSource);
+        }
+        
+        if (data.selectedVisualizations && Array.isArray(data.selectedVisualizations) && data.selectedVisualizations.length > 0) {
+            queryParams.set('selectedVisualizations', JSON.stringify(data.selectedVisualizations));
+        }
+        
+        if (data.selectedMaps && Array.isArray(data.selectedMaps) && data.selectedMaps.length > 0) {
+            queryParams.set('selectedMaps', JSON.stringify(data.selectedMaps));
+        }
+        
+        if (data.selectedDashboards && Array.isArray(data.selectedDashboards) && data.selectedDashboards.length > 0) {
+            queryParams.set('selectedDashboards', JSON.stringify(data.selectedDashboards));
+        }
+        
+        const endpoint = `/metadata-download/${configId}?${queryParams.toString()}`;
+        return queryDataServiceRoute(engine, endpoint);
+    } else {
+        return executeDataServiceRoute(engine, `/metadata-download/${configId}`, {
+            metadataSource: data.metadataSource || 'source',
+            selectedVisualizations: data.selectedVisualizations || [],
+            selectedMaps: data.selectedMaps || [],
+            selectedDashboards: data.selectedDashboards || []
+        }, 'create');
     }
-    
-    if (data.selectedVisualizations && Array.isArray(data.selectedVisualizations) && data.selectedVisualizations.length > 0) {
-        queryParams.set('selectedVisualizations', JSON.stringify(data.selectedVisualizations));
-    }
-    
-    if (data.selectedMaps && Array.isArray(data.selectedMaps) && data.selectedMaps.length > 0) {
-        queryParams.set('selectedMaps', JSON.stringify(data.selectedMaps));
-    }
-    
-    if (data.selectedDashboards && Array.isArray(data.selectedDashboards) && data.selectedDashboards.length > 0) {
-        queryParams.set('selectedDashboards', JSON.stringify(data.selectedDashboards));
-    }
-    
-    const endpoint = `/metadata-download/${configId}?${queryParams.toString()}`;
-    console.log('Metadata download endpoint with query params:', endpoint);
-    
-    return queryDataServiceRoute(engine, endpoint);
 }
 
-export async function downloadData(engine: any, configId: string, data: any): Promise<ApiResponse> {
-    const queryParams = new URLSearchParams();
+export async function downloadData(engine: any, configId: string, data: any, serverVersion?: any): Promise<ApiResponse> {
+    const useQueryParams = isVersion42OrHigher(serverVersion);
     
-    if (data.dataItemsConfigIds && Array.isArray(data.dataItemsConfigIds)) {
-        queryParams.set('dataItemsConfigIds', JSON.stringify(data.dataItemsConfigIds));
+    if (useQueryParams) {
+        const queryParams = new URLSearchParams();
+        
+        if (data.dataItemsConfigIds && Array.isArray(data.dataItemsConfigIds)) {
+            queryParams.set('dataItemsConfigIds', JSON.stringify(data.dataItemsConfigIds));
+        }
+        
+        if (data.runtimeConfig) {
+            queryParams.set('runtimeConfig', JSON.stringify(data.runtimeConfig));
+        }
+        
+        const endpoint = `/data-download/${configId}?${queryParams.toString()}`;
+        return queryDataServiceRoute(engine, endpoint);
+    } else {
+        return executeDataServiceRoute(engine, `/data-download/${configId}`, {
+            dataItemsConfigIds: data.dataItemsConfigIds || [],
+            runtimeConfig: data.runtimeConfig || {}
+        }, 'create');
     }
-    
-    if (data.runtimeConfig) {
-        queryParams.set('runtimeConfig', JSON.stringify(data.runtimeConfig));
-    }
-    
-    const endpoint = `/data-download/${configId}?${queryParams.toString()}`;
-    console.log('Data download endpoint with query params:', endpoint);
-    
-    return queryDataServiceRoute(engine, endpoint);
 }
 
-export async function startDataDeletion(engine: any, configId: string, data: any): Promise<ApiResponse> {
-    const queryParams = new URLSearchParams();
+export async function startDataDeletion(engine: any, configId: string, data: any, serverVersion?: any): Promise<ApiResponse> {
+    const useQueryParams = isVersion42OrHigher(serverVersion);
     
-    if (data.dataItemsConfigIds && Array.isArray(data.dataItemsConfigIds)) {
-        queryParams.set('dataItemsConfigIds', JSON.stringify(data.dataItemsConfigIds));
+    if (useQueryParams) {
+        const queryParams = new URLSearchParams();
+        
+        if (data.dataItemsConfigIds && Array.isArray(data.dataItemsConfigIds)) {
+            queryParams.set('dataItemsConfigIds', JSON.stringify(data.dataItemsConfigIds));
+        }
+        
+        if (data.runtimeConfig) {
+            queryParams.set('runtimeConfig', JSON.stringify(data.runtimeConfig));
+        }
+        
+        const endpoint = `/data-delete/${configId}?${queryParams.toString()}`;
+        return queryDataServiceRoute(engine, endpoint);
+    } else {
+        return executeDataServiceRoute(engine, `/data-delete/${configId}`, {
+            dataItemsConfigIds: data.dataItemsConfigIds || [],
+            runtimeConfig: data.runtimeConfig || {}
+        }, 'create');
     }
-    
-    if (data.runtimeConfig) {
-        queryParams.set('runtimeConfig', JSON.stringify(data.runtimeConfig));
-    }
-    
-    const endpoint = `/data-delete/${configId}?${queryParams.toString()}`;
-    console.log('Data deletion endpoint with query params:', endpoint);
-    
-    return queryDataServiceRoute(engine, endpoint);
 }
 
 export async function createQueues(engine: any, configId: string): Promise<ApiResponse> {

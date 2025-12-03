@@ -26,6 +26,7 @@ import { SourceMetadataSelector } from "./components/SourceMetadataSelector";
 import { downloadMetadata, downloadData, startDataDeletion } from "../../../../../../services/dataServiceClient";
 import { useNavigate } from "@tanstack/react-router";
 import { useStartValidation } from "../../../../../DataConfiguration/components/Validationlogs/hooks/validation";
+import { useConfig } from "@dhis2/app-runtime";
 
 const runConfigSchema = z.object({
 	service: z.enum([
@@ -58,6 +59,7 @@ export function RunConfigForm({
 }) {
 	const queryClient = useQueryClient();
 	const engine = useDataEngine();
+	const { serverVersion } = useConfig();
 	const navigate = useNavigate({
 		from: "/data-service-configuration/",
 	});
@@ -99,14 +101,14 @@ export function RunConfigForm({
 					selectedMaps: data.selectedMaps || [],
 					selectedDashboards: data.selectedDashboards || [],
 				};
-				result = await downloadMetadata(engine, config.id, metadataRequest);
+				result = await downloadMetadata(engine, config.id, metadataRequest, serverVersion);
 			} else if (data.service === "data-deletion") {
 				const deletionRequest = {
 					dataItemsConfigIds: data.dataItemsConfigIds,
 					runtimeConfig: data.runtimeConfig,
 				};
 
-				result = await startDataDeletion(engine, config.id, deletionRequest);
+				result = await startDataDeletion(engine, config.id, deletionRequest, serverVersion);
 			} else if (data.service === "data-validation") {
 				const validationRequest = {
 					dataItemsConfigIds: data.dataItemsConfigIds,
@@ -161,7 +163,7 @@ export function RunConfigForm({
 					runtimeConfig: data.runtimeConfig,
 				};
 
-				result = await downloadData(engine, config.id, dataRequest);
+				result = await downloadData(engine, config.id, dataRequest, serverVersion);
 			}
 
 			queryClient.invalidateQueries({

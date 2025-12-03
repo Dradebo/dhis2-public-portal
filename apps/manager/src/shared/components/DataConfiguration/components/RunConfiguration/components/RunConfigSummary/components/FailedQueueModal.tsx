@@ -89,17 +89,6 @@ export function FailedQueueModal({
         ({ type }) => ({ ...type, duration: 3000 })
     );
 
-    useEffect(() => {
-        if (isOpen) {
-            pausePolling();
-            setCurrentPage(1);
-            setSelectedMessage(null);
-            setRetryingMessageId(null);
-        } else {
-            resumePolling();
-        }
-    }, [isOpen, processType, pausePolling, resumePolling]);
-
     const offset = (currentPage - 1) * pageSize;
 
     const {
@@ -112,11 +101,24 @@ export function FailedQueueModal({
         retryByProcessType,
         isRetryingByType,
         retrySingleMessage,
+        refetch,
     } = useFailedQueueDetails(configId, {
         includeMessages: true,
         limit: pageSize,
         offset: offset
     });
+
+    useEffect(() => {
+        if (isOpen) {
+            pausePolling();
+            setCurrentPage(1);
+            setSelectedMessage(null);
+            setRetryingMessageId(null);
+            refetch?.();
+        } else {
+            resumePolling();
+        }
+    }, [isOpen, processType, pausePolling, resumePolling, refetch]);
 
     const filteredMessages = failedMessages?.messages ?
         filterMessagesByProcessType(failedMessages.messages, processType) :
