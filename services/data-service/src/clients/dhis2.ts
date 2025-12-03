@@ -6,6 +6,7 @@ import { DatastoreNamespaces } from "@packages/shared/constants";
 import logger from "@/logging";
 import { uniqBy } from "lodash";
 import * as fs from "node:fs";
+import qs from "qs";
 
 config();
 
@@ -25,6 +26,8 @@ export function createSourceClient(routeId: string): AxiosInstance {
 			Accept: "application/json",
 			Authorization: `ApiToken ${env.DHIS2_PAT}`,
 		},
+		paramsSerializer: (params) =>
+			qs.stringify(params, { encode: false }),
 	});
 }
 
