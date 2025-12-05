@@ -106,12 +106,12 @@ export function SectionLayoutEditor({
 		},
 		`config.sections.${number}.layouts`
 	>({
-		name: `${prefix}.layouts`,
+		name: `${prefix}.layouts` as `config.sections.${number}.layouts`,
 	});
 
-	const visualizations: VisualizationDisplayItem[] = useWatch({
-		name: `${prefix}.items`,
-	});
+	const visualizations = useWatch({
+		name: `${prefix}.items` as `config.sections.${number}.items`,
+	}) as VisualizationDisplayItem[] | undefined;
 
 	return (
 		<div className="flex flex-col gap-2" ref={ref}>
