@@ -129,37 +129,20 @@ export async function getVisualizationConfigs(
     return [];
   }
 
-  if (visualizations.length < 30) {
-    const response = await client.get<{ visualizations: any[] }>(
-      `visualizations`,
-      {
-        params: {
-          fields: ":owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated",
-          filter: `id:in:[${visualizations.map((vis) => vis.id).join(",")}]`,
-          paging: false,
-        },
-      }
-    );
+  logger.info(`Fetching configurations for ${visualizations.length} visualizations`);
 
-    return response.data?.visualizations;
-  }
-  const visualizationConfigs = [];
-  const chunked = _.chunk(visualizations, 30);
-  for (const chunk of chunked) {
-    const ids = chunk.map((vis) => vis.id).join(",");
-    const response = await client.get<{ visualizations: any[] }>(
-      `visualizations`,
-      {
-        params: {
-          fields: ":owner,!createdBy,!lastUpdatedBy,!created,!lastUpdated",
-          filter: `id:in:[${ids}]`,
-          paging: false,
-        },
-      }
-    );
-    visualizationConfigs.push(...response.data.visualizations);
-  }
-  return visualizationConfigs;
+  const visualizationIds = visualizations.map(vis => vis.id);
+
+  const allVisualizations = await fetchItemsInParallel(
+    client,
+    'visualizations',
+    visualizationIds,
+    ':owner,!sharing,!createdBy,!lastUpdatedBy,!created,!lastUpdated',
+    5
+  );
+
+  logger.info(`getVisualizationConfigs completed: ${allVisualizations.length} total visualizations fetched`);
+  return allVisualizations;
 }
 
 export async function getMapsConfig(maps: Visualization[], routeId?: string) {
