@@ -1,3 +1,10 @@
+## [1.5.2](https://github.com/hisptz/dhis2-public-portal/compare/v1.5.1...v1.5.2) (2025-12-08)
+
+
+### Bug Fixes
+
+* upgraded to the latest react versions in response to [security vulnerability](https://react.dev/blog/2025/12/03/critical-security-vulnerability-in-react-server-components) ([5eff348](https://github.com/hisptz/dhis2-public-portal/commit/5eff348fcdd80926215555351a0917673d2ecb02))
+
 ## [1.5.1](https://github.com/hisptz/dhis2-public-portal/compare/v1.5.0...v1.5.1) (2025-11-10)
 
 
