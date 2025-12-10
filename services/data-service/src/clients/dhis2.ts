@@ -6,7 +6,6 @@ import { DatastoreNamespaces } from "@packages/shared/constants";
 import logger from "@/logging";
 import { uniqBy } from "lodash";
 import * as fs from "node:fs";
-import qs from "qs";
 
 config();
 
@@ -26,8 +25,6 @@ export function createSourceClient(routeId: string): AxiosInstance {
 			Accept: "application/json",
 			Authorization: `ApiToken ${env.DHIS2_PAT}`,
 		},
-		paramsSerializer: (params) =>
-			qs.stringify(params, { encode: false }),
 	});
 }
 
@@ -136,18 +133,6 @@ export async function uploadMetadataFile(filePath: string) {
 		logger.info(`File size: ${fileSizeKB} KB`);
 
 		const payload = JSON.parse(fileContent);
-
-		// Log payload structure for debugging
-		if (payload) {
-			const keys = Object.keys(payload);
-			logger.info(`Payload contains: ${keys.join(', ')}`);
-			for (const key of keys) {
-				if (Array.isArray(payload[key])) {
-					logger.info(`  ${key}: ${payload[key].length} items`);
-				}
-			}
-		}
-
 		const response = await uploadWithRetry(url, payload);
 
 		logger.info(`Upload completed Successfully`);

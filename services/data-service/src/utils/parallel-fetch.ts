@@ -1,7 +1,31 @@
 import logger from "@/logging";
 import * as _ from "lodash";
 
- 
+async function fetchSingleItem<T = any>(
+  client: any,
+  endpoint: string,
+  id: string,
+  fields: string
+): Promise<T | null> {
+  try {
+    logger.info(`Fetching ${endpoint} item: ${id}`);
+    const response = await client.get(`${endpoint}/${id}`, {
+      params: {
+        fields: fields
+      }
+    });
+    logger.info(`Successfully fetched ${endpoint} item: ${id}`);
+    return response.data;
+  } catch (error: any) {
+    logger.error(`Failed to fetch ${endpoint} item ${id}:`, {
+      error: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText
+    });
+    throw error;
+  }
+}
+
 export async function fetchItemsInParallel<T = any>(
   client: any,
   endpoint: string,
@@ -21,26 +45,6 @@ export async function fetchItemsInParallel<T = any>(
     concurrency
   });
  
-  const fetchSingleItem = async (id: string): Promise<T | null> => {
-    try {
-      logger.info(`Fetching ${endpoint} item: ${id}`);
-      const response = await client.get(`${endpoint}/${id}`, {
-        params: {
-          fields: fields
-        }
-      });
-      logger.info(`Successfully fetched ${endpoint} item: ${id}`);
-      return response.data;
-    } catch (error: any) {
-      logger.error(`Failed to fetch ${endpoint} item ${id}:`, {
-        error: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText
-      });
-      return null;
-    }
-  };
- 
   const results: T[] = [];
   const chunks = _.chunk(ids, concurrency);
   
@@ -50,7 +54,7 @@ export async function fetchItemsInParallel<T = any>(
     const batch = chunks[batchIndex];
     logger.info(`Processing batch ${batchIndex + 1}/${chunks.length} with ${batch.length} items`);
     
-    const batchPromises = batch.map(id => fetchSingleItem(id));
+    const batchPromises = batch.map(id => fetchSingleItem(client, endpoint, id, fields));
     const batchResults = await Promise.all(batchPromises);
     
     batchResults.forEach(item => {
