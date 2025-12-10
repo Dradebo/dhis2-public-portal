@@ -37,7 +37,7 @@ yarn-error.log*
 .DS_Store
 *.pem
 /apps/manager/src/output.css
-/apps/manager/src/routes.gen.ts
+# /apps/manager/src/routes.gen.ts
 /apps/manager/.env
 /apps/manager/cypress.env.json
 /services/data-service/logs
