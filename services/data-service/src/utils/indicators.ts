@@ -107,7 +107,7 @@ export async function getCategoryCombos(categoryOptionComboIds: string[], routeI
     5
 
   );
-
+  
   categoryCombos.push(...fetchedCategoryCombos);
   logger.info(`Successfully fetched ${fetchedCategoryCombos.length} category combos`);
 
@@ -217,27 +217,17 @@ export function getDataItemsFromIndicatorExpression(expression: string) {
    *  I{val} - program indicator
    * We need to use regular expression to achieve getting these
    * */
-  //We first split the expression by the operator
-  const splitExpression = expression
-    .split(/\+|\*|-|\//)
-    .map((val) => val.trim());
-  const dataElementItems = splitExpression
-    .filter((val) => val.startsWith("#{"))
-    .map((val) =>
-      val
-        .replace("#{", "")
-        .replace("}", "")
-        .replace(/\(+/, "")
-        .replace(/\)+/, "")
-    );
-  const programIndicatorItems = splitExpression
-    .filter((val) => val.startsWith("I{"))
-    .map((val) => val.replace("I{", "").replace("}", ""));
-  const reportingRateItems = splitExpression
-    .filter((val) => val.startsWith("R{"))
-    .map((val) => val.replace("R{", "").replace("}", ""));
+  
+  const dataElementPattern = /#{([^}]+)}/g;
+  const programIndicatorPattern = /I{([^}]+)}/g;
+  const reportingRatePattern = /R{([^}]+)}/g;
 
-  const dataElements = dataElementItems.map((val) => {
+  const dataElementMatches = [...expression.matchAll(dataElementPattern)];
+  const programIndicatorMatches = [...expression.matchAll(programIndicatorPattern)];
+  const reportingRateMatches = [...expression.matchAll(reportingRatePattern)];
+
+  const dataElements = dataElementMatches.map((match) => {
+    const val = match[1];
     if (val.includes(".")) {
       const [dataElement, categoryOptionCombo] = val.split(".");
       return {
@@ -250,13 +240,15 @@ export function getDataItemsFromIndicatorExpression(expression: string) {
       categoryOptionCombo: undefined,
     };
   });
-  const programIndicators = programIndicatorItems.map((val) => {
+
+  const programIndicators = programIndicatorMatches.map((match) => {
     return {
-      programIndicator: val,
+      programIndicator: match[1],
     };
   });
-  const reportingRates = reportingRateItems.map((val) => {
-    const [dataSet, type] = val.split(".");
+
+  const reportingRates = reportingRateMatches.map((match) => {
+    const [dataSet, type] = match[1].split(".");
     return {
       dataSet: dataSet,
       type: type,
@@ -306,6 +298,7 @@ export function getIndicatorSources(indicator: Indicator) {
       ...denominatorDataItems.reportingRates.map(({ dataSet }) => dataSet),
     ]),
   };
+
   return {
     indicatorTypes: [type],
     ...dataItems,
