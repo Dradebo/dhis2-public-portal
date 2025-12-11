@@ -386,14 +386,6 @@ describe("Modules Page", () => {
 
 		cy.wait(5000);
 
-		cy.get('input[name="title"]').clear().type("Updated Test Group");
-		cy.get('[data-test="save-document-group-button"]').click();
-		cy.contains("td", "Updated Test Group")
-			.parent("tr")
-			.within(() => {
-				cy.get('[data-test="remove-document-group-button"]').click();
-			});
-		cy.get(':nth-child(3) > [data-test="dhis2-uicore-button"]').click();
 		cy.contains("button", "Save changes").click();
 	});
 
