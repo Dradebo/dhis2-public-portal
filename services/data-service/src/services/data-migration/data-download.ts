@@ -71,8 +71,6 @@ async function enqueueDataDownloadTasks(
 ): Promise<void> {
     const configId = mainConfig.id;
 
-    const pushPromises: Promise<void>[] = [];
-
     for (const periodId of runtimeConfig.periods) {
         for (const config of dataItemConfigs) {
             const message: DataProcessingJob = {
@@ -82,18 +80,12 @@ async function enqueueDataDownloadTasks(
                 config,
                 runtimeConfig,
             };
-
-            pushPromises.push(
-                pushToQueue(configId, 'dataDownload', message, {
-                    queuedAt: new Date().toISOString()
-                })
-            );
-        }
+             await pushToQueue(configId, 'dataDownload', message, {
+                queuedAt: new Date().toISOString()
+            });
+         }
     }
-
-    await Promise.all(pushPromises);
-    logger.info(`Successfully queued ${pushPromises.length} data download jobs`);
-}
+ }
 
 export async function downloadData(jobData: any): Promise<void> {
     try {
