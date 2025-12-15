@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDataEngine } from "@dhis2/app-runtime";
+import { useNavigate } from "@tanstack/react-router";
 import { DataServiceRunStatus } from "@packages/shared/schemas";
 import { DataServiceConfig } from "@packages/shared/schemas";
 
@@ -141,13 +142,15 @@ export function useValidationLogs(
 	} = {}
 ) {
 	const { limit = 100, offset = 0, level, autoRefresh = true } = options;
+	const navigate = useNavigate();
 
 	return useQuery({
 		queryKey: ["validation-logs", configId, limit, offset, level],
 		queryFn: async (): Promise<ValidationLogsResponse> => {
 			const session = validationSessions.get(configId);
 			if (!session) {
-				throw new Error('Validation session not found');
+ 				navigate({ to: "/data-service-configuration" });
+				throw new Error('Validation session not found - redirecting to configuration page');
 			}
 
 			let logs = session.logs;
@@ -190,13 +193,15 @@ export function useValidationDiscrepancies(
 	} = {}
 ) {
 	const { limit = 50, offset = 0, severity, type, dataElement } = options;
+	const navigate = useNavigate();
 
 	return useQuery({
 		queryKey: ["validation-discrepancies", configId, limit, offset, severity, type, dataElement],
 		queryFn: async (): Promise<ValidationDiscrepanciesResponse> => {
 			const session = validationSessions.get(configId);
 			if (!session) {
-				throw new Error('Validation session not found');
+ 				navigate({ to: "/data-service-configuration" });
+				throw new Error('Validation session not found - redirecting to configuration page');
 			}
 			let discrepancies = session.discrepancies;
 			if (severity && severity !== 'all') {
@@ -243,12 +248,15 @@ export function useValidationDiscrepancies(
 }
 
 export function useValidationStatus(configId: string) {
+	const navigate = useNavigate();
+
 	return useQuery({
 		queryKey: ["validation-status", configId],
 		queryFn: async (): Promise<ValidationSummary> => {
 			const session = validationSessions.get(configId);
 			if (!session) {
-				throw new Error('Validation session not found');
+ 				navigate({ to: "/data-service-configuration" });
+				throw new Error('Validation session not found - redirecting to configuration page');
 			}
 
 			return session.summary;
@@ -262,7 +270,33 @@ export function useValidationStatus(configId: string) {
 }
 
 
-const fetchDataFromSource = async (engine: any, sourceConfig: DataServiceConfig, dataElements: string[], periods: string[], orgUnits: string[]) => {
+const fetchDataFromSource = async (engine: any, sourceConfig: DataServiceConfig, dataElements: string[], periods: string[], orgUnits: string[], pageSize?: number) => {
+	try {
+ 		if (pageSize && dataElements.length > pageSize) {
+			let allData: any[] = [];
+			const batchCount = Math.ceil(dataElements.length / pageSize);
+			
+			for (let i = 0; i < batchCount; i++) {
+				const start = i * pageSize;
+				const end = Math.min((i + 1) * pageSize, dataElements.length);
+				const batchElements = dataElements.slice(start, end);
+				
+				console.log(`Fetching source data batch ${i + 1}/${batchCount}: ${batchElements.length} elements`);
+				
+				const batchData = await fetchDataFromSourceBatch(engine, sourceConfig, batchElements, periods, orgUnits);
+				allData = allData.concat(batchData);
+			}
+			return allData;
+		}
+		
+		return await fetchDataFromSourceBatch(engine, sourceConfig, dataElements, periods, orgUnits);
+	} catch (error) {
+		console.error('Error fetching source data:', error);
+		throw error;
+	}
+};
+
+const fetchDataFromSourceBatch = async (engine: any, sourceConfig: DataServiceConfig, dataElements: string[], periods: string[], orgUnits: string[]) => {
 	try {
 		const dxItems = dataElements.map(de => {
 			if (de.includes('.')) {
@@ -324,12 +358,38 @@ const fetchDataFromSource = async (engine: any, sourceConfig: DataServiceConfig,
 
 		return transformedDataValues;
 	} catch (error) {
-		console.error('Error fetching source data:', error);
+		console.error('Error fetching source data batch:', error);
 		throw error;
 	}
 };
 
-const fetchDataFromDestination = async (engine: any, destinationConfig: DataServiceConfig, dataElements: string[], periods: string[], orgUnits: string[]) => {
+const fetchDataFromDestination = async (engine: any, destinationConfig: DataServiceConfig, dataElements: string[], periods: string[], orgUnits: string[], pageSize?: number) => {
+	try {
+ 		if (pageSize && dataElements.length > pageSize) {
+			let allData: any[] = [];
+			const batchCount = Math.ceil(dataElements.length / pageSize);
+			
+			for (let i = 0; i < batchCount; i++) {
+				const start = i * pageSize;
+				const end = Math.min((i + 1) * pageSize, dataElements.length);
+				const batchElements = dataElements.slice(start, end);
+				
+				console.log(`Fetching destination data batch ${i + 1}/${batchCount}: ${batchElements.length} elements`);
+				
+				const batchData = await fetchDataFromDestinationBatch(engine, destinationConfig, batchElements, periods, orgUnits);
+				allData = allData.concat(batchData);
+			}
+			return allData;
+		}
+		
+		return await fetchDataFromDestinationBatch(engine, destinationConfig, dataElements, periods, orgUnits);
+	} catch (error) {
+		console.error('Error fetching destination data:', error);
+		return [];
+	}
+};
+
+const fetchDataFromDestinationBatch = async (engine: any, destinationConfig: DataServiceConfig, dataElements: string[], periods: string[], orgUnits: string[]) => {
 	try {
 		const dxItems = dataElements.map(de => {
 			if (de.includes('.')) {
@@ -393,9 +453,7 @@ const fetchDataFromDestination = async (engine: any, destinationConfig: DataServ
 
 		return transformedDataValues;
 	} catch (error) {
-		console.error('Error fetching destination data via direct API:', error);
-		console.warn('Direct API endpoint failed for destination. This may indicate permissions or missing analytics data.');
-		console.warn('Proceeding with source-only validation.');
+		console.error('Error fetching destination data batch:', error);
 		return [];
 	}
 };
@@ -437,7 +495,13 @@ const performValidation = async (
 		addLogEntry(configId, 'info', `Organization units: ${orgUnits.join(', ')}`);
 		addLogEntry(configId, 'info', `Data elements: ${dataElements.slice(0, 5).join(', ')}${dataElements.length > 5 ? ` and ${dataElements.length - 5} more` : ''}`);
 
-		addLogEntry(configId, 'info', 'Fetching metadata for organization units, data elements, and category option combos');
+ 		const paginateByData = fullParams.runtimeConfig?.paginateByData || false;
+		const pageSize = fullParams.runtimeConfig?.pageSize || 30;
+		
+		let dataElementsToProcess = dataElements;
+		if (paginateByData && dataElements.length > pageSize) {
+			addLogEntry(configId, 'info', `Pagination by data enabled. Will process ${dataElements.length} data elements in batches of ${pageSize}`);
+		}
 		const categoryOptionComboIds = [...new Set(
 			dataElements
 				.filter(de => de.includes('.'))
@@ -507,7 +571,14 @@ const performValidation = async (
 		};
 
 		addLogEntry(configId, 'info', 'Fetching data from source instance');
-		const sourceData = await fetchDataFromSource(engine, sourceConfig, dataElements, periods, orgUnits);
+		const sourceData = await fetchDataFromSource(
+			engine, 
+			sourceConfig, 
+			dataElements, 
+			periods, 
+			orgUnits,
+			paginateByData ? pageSize : undefined
+		);
 
 		const skipDestination = fullParams.skipDestination || false;
 
@@ -517,7 +588,14 @@ const performValidation = async (
 			addLogEntry(configId, 'info', 'Skipping destination data fetch as requested (source-only validation)');
 		} else {
 			addLogEntry(configId, 'info', 'Fetching data from destination instance');
-			destinationData = await fetchDataFromDestination(engine, sourceConfig, dataElements, periods, orgUnits);
+			destinationData = await fetchDataFromDestination(
+				engine, 
+				sourceConfig, 
+				dataElements, 
+				periods, 
+				orgUnits,
+				paginateByData ? pageSize : undefined
+			);
 		}
 
 		if (destinationData.length === 0 && sourceData.length > 0) {

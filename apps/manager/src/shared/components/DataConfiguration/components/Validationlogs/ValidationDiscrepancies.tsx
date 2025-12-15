@@ -112,6 +112,32 @@ export function ValidationDiscrepancies({ discrepancies, summary, isLoading, err
         return String(value);
     };
 
+    const getSeverityColor = (severity: string) => {
+        switch (severity) {
+            case 'critical':
+                return 'bg-red-100 border-red-300';
+            case 'major':
+                return 'bg-yellow-100 border-yellow-300';
+            case 'minor':
+                return 'bg-blue-100 border-blue-300';
+            default:
+                return '';
+        }
+    };
+
+    const getSeverityTextColor = (severity: string) => {
+        switch (severity) {
+            case 'critical':
+                return 'text-red-700';
+            case 'major':
+                return 'text-yellow-700';
+            case 'minor':
+                return 'text-blue-700';
+            default:
+                return '';
+        }
+    };
+
     const formatPeriod = (periodId: string): string => {
         try {
             const period = PeriodUtility.getPeriodById(periodId);
@@ -240,6 +266,12 @@ export function ValidationDiscrepancies({ discrepancies, summary, isLoading, err
                                                     const sourceValue = data?.source ?? null;
                                                     const destinationValue = data?.destination ?? null;
                                                     const hasDiscrepancy = data?.hasDiscrepancy ?? false;
+ 
+                                                    const discrepancy = discrepancies.find(d => 
+                                                        d.dataElement === dataElementCombo && 
+                                                        d.period === period
+                                                    );
+                                                    const severity = discrepancy?.severity || 'minor';
 
                                                     return (
                                                         <React.Fragment key={dataElementCombo}>
@@ -250,7 +282,7 @@ export function ValidationDiscrepancies({ discrepancies, summary, isLoading, err
                                                             </TableCell>
                                                             <TableCell
                                                                 className={hasDiscrepancy
-                                                                    ? "text-center bg-red-50 text-red-700 font-medium border border-red-200"
+                                                                    ? `text-center font-medium border ${getSeverityColor(severity)} ${getSeverityTextColor(severity)}`
                                                                     : "text-center"
                                                                 }
                                                             >
