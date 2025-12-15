@@ -40,7 +40,7 @@ export interface ValidationSummary {
 	criticalDiscrepancies: number;
 	majorDiscrepancies: number;
 	minorDiscrepancies: number;
-	progress: number; // 0-100
+	progress: number;
 	lastActivity?: string;
 }
 
@@ -149,7 +149,7 @@ export function useValidationLogs(
 		queryFn: async (): Promise<ValidationLogsResponse> => {
 			const session = validationSessions.get(configId);
 			if (!session) {
- 				navigate({ to: "/data-service-configuration" });
+				navigate({ to: "/data-service-configuration" });
 				throw new Error('Validation session not found - redirecting to configuration page');
 			}
 
@@ -200,7 +200,7 @@ export function useValidationDiscrepancies(
 		queryFn: async (): Promise<ValidationDiscrepanciesResponse> => {
 			const session = validationSessions.get(configId);
 			if (!session) {
- 				navigate({ to: "/data-service-configuration" });
+				navigate({ to: "/data-service-configuration" });
 				throw new Error('Validation session not found - redirecting to configuration page');
 			}
 			let discrepancies = session.discrepancies;
@@ -255,7 +255,7 @@ export function useValidationStatus(configId: string) {
 		queryFn: async (): Promise<ValidationSummary> => {
 			const session = validationSessions.get(configId);
 			if (!session) {
- 				navigate({ to: "/data-service-configuration" });
+				navigate({ to: "/data-service-configuration" });
 				throw new Error('Validation session not found - redirecting to configuration page');
 			}
 
@@ -272,23 +272,23 @@ export function useValidationStatus(configId: string) {
 
 const fetchDataFromSource = async (engine: any, sourceConfig: DataServiceConfig, dataElements: string[], periods: string[], orgUnits: string[], pageSize?: number) => {
 	try {
- 		if (pageSize && dataElements.length > pageSize) {
+		if (pageSize && dataElements.length > pageSize) {
 			let allData: any[] = [];
 			const batchCount = Math.ceil(dataElements.length / pageSize);
-			
+
 			for (let i = 0; i < batchCount; i++) {
 				const start = i * pageSize;
 				const end = Math.min((i + 1) * pageSize, dataElements.length);
 				const batchElements = dataElements.slice(start, end);
-				
+
 				console.log(`Fetching source data batch ${i + 1}/${batchCount}: ${batchElements.length} elements`);
-				
+
 				const batchData = await fetchDataFromSourceBatch(engine, sourceConfig, batchElements, periods, orgUnits);
 				allData = allData.concat(batchData);
 			}
 			return allData;
 		}
-		
+
 		return await fetchDataFromSourceBatch(engine, sourceConfig, dataElements, periods, orgUnits);
 	} catch (error) {
 		console.error('Error fetching source data:', error);
@@ -365,23 +365,23 @@ const fetchDataFromSourceBatch = async (engine: any, sourceConfig: DataServiceCo
 
 const fetchDataFromDestination = async (engine: any, destinationConfig: DataServiceConfig, dataElements: string[], periods: string[], orgUnits: string[], pageSize?: number) => {
 	try {
- 		if (pageSize && dataElements.length > pageSize) {
+		if (pageSize && dataElements.length > pageSize) {
 			let allData: any[] = [];
 			const batchCount = Math.ceil(dataElements.length / pageSize);
-			
+
 			for (let i = 0; i < batchCount; i++) {
 				const start = i * pageSize;
 				const end = Math.min((i + 1) * pageSize, dataElements.length);
 				const batchElements = dataElements.slice(start, end);
-				
+
 				console.log(`Fetching destination data batch ${i + 1}/${batchCount}: ${batchElements.length} elements`);
-				
+
 				const batchData = await fetchDataFromDestinationBatch(engine, destinationConfig, batchElements, periods, orgUnits);
 				allData = allData.concat(batchData);
 			}
 			return allData;
 		}
-		
+
 		return await fetchDataFromDestinationBatch(engine, destinationConfig, dataElements, periods, orgUnits);
 	} catch (error) {
 		console.error('Error fetching destination data:', error);
@@ -495,9 +495,9 @@ const performValidation = async (
 		addLogEntry(configId, 'info', `Organization units: ${orgUnits.join(', ')}`);
 		addLogEntry(configId, 'info', `Data elements: ${dataElements.slice(0, 5).join(', ')}${dataElements.length > 5 ? ` and ${dataElements.length - 5} more` : ''}`);
 
- 		const paginateByData = fullParams.runtimeConfig?.paginateByData || false;
+		const paginateByData = fullParams.runtimeConfig?.paginateByData || false;
 		const pageSize = fullParams.runtimeConfig?.pageSize || 30;
-		
+
 		let dataElementsToProcess = dataElements;
 		if (paginateByData && dataElements.length > pageSize) {
 			addLogEntry(configId, 'info', `Pagination by data enabled. Will process ${dataElements.length} data elements in batches of ${pageSize}`);
@@ -572,10 +572,10 @@ const performValidation = async (
 
 		addLogEntry(configId, 'info', 'Fetching data from source instance');
 		const sourceData = await fetchDataFromSource(
-			engine, 
-			sourceConfig, 
-			dataElements, 
-			periods, 
+			engine,
+			sourceConfig,
+			dataElements,
+			periods,
 			orgUnits,
 			paginateByData ? pageSize : undefined
 		);
@@ -589,10 +589,10 @@ const performValidation = async (
 		} else {
 			addLogEntry(configId, 'info', 'Fetching data from destination instance');
 			destinationData = await fetchDataFromDestination(
-				engine, 
-				sourceConfig, 
-				dataElements, 
-				periods, 
+				engine,
+				sourceConfig,
+				dataElements,
+				periods,
 				orgUnits,
 				paginateByData ? pageSize : undefined
 			);
@@ -767,13 +767,11 @@ export function useStartValidation(configId: string, sourceConfig: DataServiceCo
 
 			validationSessions.set(configId, session);
 
-			// Start validation asynchronously - all processing done in frontend
 			setTimeout(async () => {
 				try {
 					await performValidation(engine, configId, sourceConfig, validationRequest.dataItemsConfigIds, validationRequest.runtimeConfig);
 				} catch (error) {
 					console.error('Validation failed:', error);
-					// Update session status to failed
 					const currentSession = validationSessions.get(configId);
 					if (currentSession) {
 						currentSession.status = DataServiceRunStatus.FAILED;
@@ -782,7 +780,6 @@ export function useStartValidation(configId: string, sourceConfig: DataServiceCo
 					}
 				}
 
-				// Invalidate queries to trigger UI updates
 				queryClient.invalidateQueries({ queryKey: ["validation-logs", configId] });
 				queryClient.invalidateQueries({ queryKey: ["validation-status", configId] });
 				queryClient.invalidateQueries({ queryKey: ["validation-discrepancies", configId] });
@@ -791,7 +788,6 @@ export function useStartValidation(configId: string, sourceConfig: DataServiceCo
 			return { success: true, message: 'Validation started successfully' };
 		},
 		onSuccess: () => {
-			// Invalidate and refetch all validation-related queries
 			queryClient.invalidateQueries({ queryKey: ["validation-logs", configId] });
 			queryClient.invalidateQueries({ queryKey: ["validation-status", configId] });
 			queryClient.invalidateQueries({ queryKey: ["validation-discrepancies", configId] });
@@ -799,7 +795,6 @@ export function useStartValidation(configId: string, sourceConfig: DataServiceCo
 	});
 }
 
-// Hook for re-running validation (uses existing session config)
 export function useRerunValidation(configId: string) {
 	const queryClient = useQueryClient();
 	const engine = useDataEngine();
@@ -811,7 +806,6 @@ export function useRerunValidation(configId: string) {
 				throw new Error('No previous validation session found');
 			}
 
-			// Reset session state
 			session.status = DataServiceRunStatus.QUEUED;
 			session.startTime = new Date().toISOString();
 			session.endTime = undefined;
@@ -831,7 +825,6 @@ export function useRerunValidation(configId: string) {
 				progress: 0
 			};
 
-			// Start validation asynchronously
 			setTimeout(async () => {
 				try {
 					await performValidation(
@@ -845,7 +838,6 @@ export function useRerunValidation(configId: string) {
 					console.error('Validation failed:', error);
 				}
 
-				// Invalidate queries to trigger UI updates
 				queryClient.invalidateQueries({ queryKey: ["validation-logs", configId] });
 				queryClient.invalidateQueries({ queryKey: ["validation-status", configId] });
 				queryClient.invalidateQueries({ queryKey: ["validation-discrepancies", configId] });
@@ -854,7 +846,6 @@ export function useRerunValidation(configId: string) {
 			return { success: true, message: 'Validation restarted successfully' };
 		},
 		onSuccess: () => {
-			// Invalidate and refetch all validation-related queries
 			queryClient.invalidateQueries({ queryKey: ["validation-logs", configId] });
 			queryClient.invalidateQueries({ queryKey: ["validation-status", configId] });
 			queryClient.invalidateQueries({ queryKey: ["validation-discrepancies", configId] });
@@ -871,7 +862,6 @@ const exportToCSV = (data: any[]): string => {
 		headers.join(','),
 		...data.map(row => headers.map(header => {
 			const value = row[header];
-			// Escape commas and quotes in CSV
 			if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
 				return `"${value.replace(/"/g, '""')}"`;
 			}
@@ -886,7 +876,6 @@ const exportToJSON = (data: any): string => {
 	return JSON.stringify(data, null, 2);
 };
 
-// Hook for exporting validation results
 export function useExportValidationResults(configId: string) {
 	return useMutation({
 		mutationFn: async (options: {
