@@ -81,7 +81,7 @@ export async function fetchPagedData({
 		if (e instanceof AxiosError) {
 			logger.error(`Axios Error fetching data: ${e.message}`);
 			logger.error(
-				`Axios Status code: ${e.response?.status} - ${e.response?.statusText}`,
+				`Axios Status code: ${e.response?.status} - ${e.response?.data.message}`,
 			);
 			throw e;
 		} else {
