@@ -40,7 +40,7 @@ export async function deleteAndQueueData(options: DataDeleteOptions): Promise<vo
             return mainConfig.itemsConfig.find(({ id: configId }) => configId === id);
         }));
         await enqueueDataDeleteTasks(mainConfig, runtimeConfig, dataItemConfigs);
-                
+
         logger.info(`Data delete jobs successfully queued for config: ${mainConfigId}`);
     } catch (error) {
         logger.error(`Error during delete and queue process for config ${options.mainConfigId}:`, error);
@@ -87,28 +87,23 @@ async function enqueueDataDeleteTasks(
                 config,
                 runtimeConfig,
             };
+            await pushToQueue(configId, 'dataDeletion', message, {
+                queuedAt: new Date().toISOString(),
+                operation: 'delete'
+            })
 
-            pushPromises.push(
-                pushToQueue(configId, 'dataDeletion', message, {
-                    queuedAt: new Date().toISOString(),
-                    operation: 'delete'
-                })
-            );
         }
     }
-
-    await Promise.all(pushPromises);
-    logger.info(`Successfully queued ${pushPromises.length} data delete jobs`);
 }
 
 export async function deleteData(jobData: any): Promise<void> {
     try {
-        const { mainConfigId, mainConfig, periodId, config, runtimeConfig, overrideDimensions } = jobData;
+        const { mainConfigId, periodId, config } = jobData;
 
         const mainConfigForClient = await fetchMainConfiguration(mainConfigId);
         const client = createDownloadClient({ config: mainConfigForClient });
         logger.info(`Processing delete job for config: ${mainConfigForClient.id}, period: ${periodId}, config: ${config.id}`);
-        
+
         const shouldPaginate = await handleDeletePagination(jobData, client);
         if (shouldPaginate) {
             return;
@@ -194,7 +189,7 @@ async function processDataDeletion(jobData: any, client: any): Promise<void> {
     const data = await fetchPagedData({
         dimensions,
         filters: config.filters,
-        client: dhis2Client,  
+        client: dhis2Client,
         timeout: runtimeConfig.timeout,
     });
 
@@ -249,7 +244,7 @@ async function deleteDataValues(dataValues: any[], configId: string): Promise<{ 
         };
         const response = await dhis2Client.post(url, deletionPayload, { params });
         const importSummary = response.data?.response || response.data;
-        
+
         if (!importSummary || !importSummary.importCount) {
             throw new Error("Invalid response from DHIS2 data deletion");
         }
