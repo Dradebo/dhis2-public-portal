@@ -3,7 +3,6 @@ import { Operation } from 'express-openapi';
 import logger from '@/logging';
 import { getMultipleQueueStatus, getSystemHealth } from '@/services/status';
 import { getQueueNames } from '@/variables/queue-names';
-import { getAllProgress, buildProcessStatus } from '@/utils/progress-tracker';
 
 export const GET: Operation = async (
     req: Request,
@@ -50,12 +49,7 @@ export const GET: Operation = async (
             failed: 0
         });
 
-        const progressData = await getAllProgress(configId);
-        const failedCount = statusByType.dlq?.messages || 0;
-
         const processes = {
-            // metadataDownload: buildProcessStatus('metadata-download', progressData, failedCount),
-            // metadataUpload: buildProcessStatus('metadata-upload', progressData, failedCount),
             metadataDownload: buildProcessStatusFromQueue(statusByType.metadataDownload),
             metadataUpload: buildProcessStatusFromQueue(statusByType.metadataUpload),
             dataDownload: buildProcessStatusFromQueue(statusByType.dataDownload),
