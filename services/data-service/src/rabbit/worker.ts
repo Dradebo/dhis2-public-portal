@@ -1,7 +1,7 @@
 import { Channel, ConsumeMessage } from "amqplib";
 import figlet from "figlet";
 import logger from "@/logging";
-import { connectRabbit, getChannel } from "./connection";
+import { connectRabbit, getConnection } from "./connection";
 import { uploadDataFromQueue } from "@/services/data-migration/data-upload";
 import { uploadMetadataFromQueue } from "@/services/metadata-migration/metadata-upload";
 import { downloadAndQueueMetadata } from "@/services/metadata-migration/metadata-download";
@@ -65,16 +65,19 @@ export const startWorker = async () => {
   isConnecting = true;
   try {
     await connectRabbit();
-    const channel = getChannel();
+    const connection = getConnection();
 
-    if (!channel) {
-      throw new Error("Failed to get RabbitMQ channel");
+    if (!connection) {
+      throw new Error("Failed to get RabbitMQ connection");
     }
+
+    const downloadChannel = await connection.createChannel();
+    const uploadChannel = await connection.createChannel();
 
     isConnecting = false;
 
     // Setup reconnection on connection close
-    channel.connection.once("close", () => {
+    connection.once("close", () => {
       logger.error(
         "[Worker] RabbitMQ connection closed! Attempting to reconnect...",
       );
@@ -82,7 +85,7 @@ export const startWorker = async () => {
     });
 
     logger.info("[Worker] Setting up consumers...");
-    await setupConsumer(channel);
+    await setupConsumer(downloadChannel, uploadChannel);
 
   } catch (error) {
     logger.error(
@@ -197,21 +200,22 @@ const handleMessage = async (
   }
 };
 
-const setupConsumer = async (channel: Channel) => {
+const setupConsumer = async (downloadChannel: Channel, uploadChannel: Channel) => {
   try {
     logger.info("[ConsumerSetup] Starting to discover configs from datastore...");
     const configIds = await getAllConfigIds();
     logger.info(`[ConsumerSetup] Found ${configIds.length} configurations`);
 
     const prefetchCount = parseInt(process.env.RABBITMQ_PREFETCH_COUNT || "2");
-    channel.prefetch(prefetchCount);
+    downloadChannel.prefetch(prefetchCount);
+    uploadChannel.prefetch(prefetchCount);
 
     // Set up queues and consumers for each config
     for (const configId of configIds) {
       const queueNames = getQueueNames(configId);
 
       // Create DLQ first
-      await channel.assertQueue(queueNames.failed, { durable: true });
+      await downloadChannel.assertQueue(queueNames.failed, { durable: true });
 
       // Queue configuration with DLQ
       const queueOptions = {
@@ -224,14 +228,14 @@ const setupConsumer = async (channel: Channel) => {
 
       // Setup work queues for this config
       const queuesToSetup = [
-        { queueName: queueNames.metadataDownload, handlerType: "metadataDownload" },
-        { queueName: queueNames.metadataUpload, handlerType: "metadataUpload" },
-        { queueName: queueNames.dataDownload, handlerType: "dataDownload" },
-        { queueName: queueNames.dataUpload, handlerType: "dataUpload" },
-        { queueName: queueNames.dataDeletion, handlerType: "dataDeletion" },
+        { queueName: queueNames.metadataDownload, handlerType: "metadataDownload", channel: downloadChannel },
+        { queueName: queueNames.metadataUpload, handlerType: "metadataUpload", channel: uploadChannel },
+        { queueName: queueNames.dataDownload, handlerType: "dataDownload", channel: downloadChannel },
+        { queueName: queueNames.dataUpload, handlerType: "dataUpload", channel: uploadChannel },
+        { queueName: queueNames.dataDeletion, handlerType: "dataDeletion", channel: uploadChannel },
       ];
 
-      for (const { queueName, handlerType } of queuesToSetup) {
+      for (const { queueName, handlerType, channel } of queuesToSetup) {
         // Assert the queue
         await channel.assertQueue(queueName, queueOptions);
 

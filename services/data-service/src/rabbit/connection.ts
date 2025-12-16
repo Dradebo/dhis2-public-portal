@@ -2,6 +2,12 @@ import logger from "@/logging";
 import amqp from "amqplib";
  
 let channel: amqp.Channel;
+let connection: any;
+
+export function getConnection(): any {
+    if (!connection) throw new Error("RabbitMQ connection not initialized");
+    return connection;
+}
 
 export async function connectRabbit(maxRetries = 10, delayMs = 5000) {
     const rabbitUri = process.env.RABBITMQ_URI  || "amqp://localhost";
@@ -10,7 +16,7 @@ export async function connectRabbit(maxRetries = 10, delayMs = 5000) {
 
     while (attempt < maxRetries) {
         try {
-            const connection = await amqp.connect(rabbitUri);
+            connection = await amqp.connect(rabbitUri);
             channel = await connection.createChannel();
             logger.info("Connected to RabbitMQ");
 
@@ -20,7 +26,7 @@ export async function connectRabbit(maxRetries = 10, delayMs = 5000) {
                 connectRabbit(maxRetries, delayMs);
             });
 
-            connection.on("error", (err) => {
+            connection.on("error", (err: any) => {
                 logger.error("RabbitMQ connection error:", err.message);
             });
 

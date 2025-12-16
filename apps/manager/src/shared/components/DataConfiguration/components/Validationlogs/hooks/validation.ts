@@ -624,6 +624,11 @@ const performValidation = async (
 		for (const [key, sourceValue] of sourceMap) {
 			recordsProcessed++;
 
+			// Yield to event loop every 50 records to allow UI updates
+			if (recordsProcessed % 50 === 0) {
+				await new Promise(resolve => setTimeout(resolve, 0));
+			}
+
 			if (!destinationMap.has(key)) {
 				const dataElementDisplayName = buildDataElementDisplayName(sourceValue.dataElement, sourceValue.categoryOptionCombo);
 				const orgUnitName = orgUnitNamesMap.get(sourceValue.orgUnit) || sourceValue.orgUnit;
@@ -647,7 +652,12 @@ const performValidation = async (
 					const source = parseFloat(sourceValue.value || '0');
 					const destination = parseFloat(destValue.value || '0');
 					const numericDiff = Math.abs(source - destination);
-					const severity = destination > source ? 'critical' : numericDiff > 100 ? 'major' : 'minor';
+					let severity;
+					if (numericDiff === 0) {
+						severity = 'minor';
+					} else {
+						severity = destination > source ? 'critical' : numericDiff > 100 ? 'major' : 'minor';
+					}
 
 					const dataElementDisplayName = buildDataElementDisplayName(sourceValue.dataElement, sourceValue.categoryOptionCombo);
 					const orgUnitName = orgUnitNamesMap.get(sourceValue.orgUnit) as string || sourceValue.orgUnit;
@@ -676,6 +686,11 @@ const performValidation = async (
 		}
 
 		for (const [key, destValue] of destinationMap) {
+			// Yield to event loop every 50 records to allow UI updates
+			if (recordsProcessed % 50 === 0) {
+				await new Promise(resolve => setTimeout(resolve, 0));
+			}
+
 			if (!sourceMap.has(key)) {
 				const dataElementDisplayName = buildDataElementDisplayName(destValue.dataElement, destValue.categoryOptionCombo);
 				const orgUnitName = orgUnitNamesMap.get(destValue.orgUnit) as string || destValue.orgUnit;
