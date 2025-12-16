@@ -56,9 +56,9 @@ export const GET: Operation = async (
 
             totalFailedMessages = queueInfoResponse.data.messages || 0;
 
-            if (totalFailedMessages > 0 && (includeMessages || onlyQueues)) {
+            if (totalFailedMessages > 0 && (includeMessages || onlyQueues)) { 
                 const fetchCount = onlyQueues ?
-                    Math.min(50, totalFailedMessages) :
+                    totalFailedMessages :
                     Math.min(offset + limit * 2, totalFailedMessages);
 
                 const messagesResponse = await axios.post(
