@@ -644,8 +644,10 @@ const performValidation = async (
 			} else {
 				const destValue = destinationMap.get(key);
 				if (sourceValue.value !== destValue.value) {
-					const numericDiff = Math.abs(parseFloat(sourceValue.value || '0') - parseFloat(destValue.value || '0'));
-					const severity = numericDiff > 100 ? 'critical' : numericDiff > 10 ? 'major' : 'minor';
+					const source = parseFloat(sourceValue.value || '0');
+					const destination = parseFloat(destValue.value || '0');
+					const numericDiff = Math.abs(source - destination);
+					const severity = destination > source ? 'critical' : numericDiff > 100 ? 'major' : 'minor';
 
 					const dataElementDisplayName = buildDataElementDisplayName(sourceValue.dataElement, sourceValue.categoryOptionCombo);
 					const orgUnitName = orgUnitNamesMap.get(sourceValue.orgUnit) as string || sourceValue.orgUnit;

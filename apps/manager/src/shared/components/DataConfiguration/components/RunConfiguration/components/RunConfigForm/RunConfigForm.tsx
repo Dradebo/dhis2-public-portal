@@ -126,12 +126,12 @@ export function RunConfigForm({
 				}
 
 				// Get selected config items details
-				const selectedConfigs = config.itemsConfig.filter(item => 
+				const selectedConfigs = config.itemsConfig.filter(item =>
 					data.dataItemsConfigIds.includes(item.id)
 				);
 
 				// Extract all data elements and org units from selected configs
-				const allDataElements = selectedConfigs.flatMap(configItem => 
+				const allDataElements = selectedConfigs.flatMap(configItem =>
 					configItem.dataItems.map(dataItem => dataItem.id)
 				);
 				const allOrgUnits = selectedConfigs.map(configItem => configItem.parentOrgUnitId);
@@ -314,18 +314,16 @@ export function RunConfigForm({
 							<>
 								<PeriodSelector minPeriodType={"MONTHLY"} />
 								<ConfigSelector config={config} />
-								{selectedService !== "data-deletion" && (
-									<>
-										<RHFNumberField
-											name={"runtimeConfig.pageSize"}
-											label={i18n.t("Page size")}
-										/>
-										<RHFCheckboxField
-											name={"runtimeConfig.paginateByData"}
-											label={i18n.t("Paginate by data")}
-										/>
-									</>
-								)}
+								<>
+									<RHFNumberField
+										name={"runtimeConfig.pageSize"}
+										label={i18n.t("Page size")}
+									/>
+									<RHFCheckboxField
+										name={"runtimeConfig.paginateByData"}
+										label={i18n.t("Paginate by data")}
+									/>
+								</>
 							</>
 						)}
 					</form>

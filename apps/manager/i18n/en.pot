@@ -5,8 +5,8 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"POT-Creation-Date: 2025-12-15T09:01:27.357Z\n"
-"PO-Revision-Date: 2025-12-15T09:01:27.358Z\n"
+"POT-Creation-Date: 2025-12-16T09:35:20.082Z\n"
+"PO-Revision-Date: 2025-12-16T09:35:20.082Z\n"
 
 msgid "Could not get Appearance configurations"
 msgstr "Could not get Appearance configurations"
@@ -600,9 +600,6 @@ msgstr "An error occurred while loading the validation logs"
 
 msgid "Validation console ready. Logs will appear here when validation starts."
 msgstr "Validation console ready. Logs will appear here when validation starts."
-
-msgid "Click to view metadata in browser console"
-msgstr "Click to view metadata in browser console"
 
 msgid "Validation process restarted successfully"
 msgstr "Validation process restarted successfully"

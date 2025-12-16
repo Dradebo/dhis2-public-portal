@@ -1,4 +1,3 @@
- 
 import { NextFunction, Request, Response } from 'express';
 import logger from '@/logging';
 import { Operation } from 'express-openapi';
@@ -103,6 +102,38 @@ async function retryMessage(message: any, configId: string): Promise<{ success: 
     }
 }
 
+async function getQueueDepth(configId: string): Promise<number> {
+    const queueNames = getQueueNames(configId);
+    const failedQueueName = queueNames.failed;
+    
+    const rabbitMQConfig = {
+        baseURL: process.env.RABBITMQ_HOST || 'http://localhost:15672',
+        username: process.env.RABBITMQ_USER || 'guest',
+        password: process.env.RABBITMQ_PASS || 'guest',
+        vhost: process.env.RABBITMQ_VHOST || '%2F'
+    };
+
+    const baseURL = rabbitMQConfig.baseURL;
+    const auth = Buffer.from(`${rabbitMQConfig.username}:${rabbitMQConfig.password}`).toString('base64');
+
+    try {
+        const response = await axios.get(
+            `${baseURL}/api/queues/${rabbitMQConfig.vhost}/${failedQueueName}`,
+            {
+                headers: {
+                    'Authorization': `Basic ${auth}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        return response.data.messages || 0;
+    } catch (error: any) {
+        logger.error(`Error getting queue depth:`, error);
+        return 0;
+    }
+}
+
 export const GET: Operation = async (
     req: Request,
     res: Response,
@@ -113,17 +144,26 @@ export const GET: Operation = async (
         
         // Read parameters from query string
         const maxRetriesParam = req.query.maxRetries as string;
-        let maxRetries = 10;
+        let maxRetries: number;
         
         if (maxRetriesParam) {
             const parsed = parseInt(maxRetriesParam, 10);
-            if (isNaN(parsed) || parsed < 1 || parsed > 1000) {
+            if (isNaN(parsed) || parsed < 1) {
                 return res.status(400).json({
                     error: 'Invalid maxRetries parameter',
-                    message: 'maxRetries must be an integer between 1 and 1000'
+                    message: 'maxRetries must be a positive integer'
                 });
             }
             maxRetries = parsed;
+        } else {
+            // Default to all messages in the queue
+            maxRetries = await getQueueDepth(configId);
+            // Add a small buffer or ensure we try to get at least something if there's a race condition
+            if (maxRetries === 0) {
+                logger.info(`Queue appears empty for config: ${configId}`);
+            } else {
+                logger.info(`No maxRetries param provided. Defaulting to queue depth: ${maxRetries}`);
+            }
         }
         
         const retryType = req.query.retryType as string || 'all';
@@ -137,6 +177,19 @@ export const GET: Operation = async (
         }
 
         logger.info(`Retry request received for config: ${configId}`, { maxRetries, retryType, processType });
+
+        if (maxRetries === 0) {
+            return res.json({
+                success: true,
+                message: 'No failed messages to retry',
+                configId,
+                results: {
+                    totalAttempted: 0,
+                    successfulRetries: 0,
+                    failedRetries: 0,
+                }
+            });
+        }
 
         // Get and consume failed messages
         const failedMessages = await consumeFailedMessagesFromRabbitMQ(configId, maxRetries);
