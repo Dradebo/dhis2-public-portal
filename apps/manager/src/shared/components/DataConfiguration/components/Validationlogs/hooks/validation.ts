@@ -280,9 +280,6 @@ const fetchDataFromSource = async (engine: any, sourceConfig: DataServiceConfig,
 				const start = i * pageSize;
 				const end = Math.min((i + 1) * pageSize, dataElements.length);
 				const batchElements = dataElements.slice(start, end);
-
-				console.log(`Fetching source data batch ${i + 1}/${batchCount}: ${batchElements.length} elements`);
-
 				const batchData = await fetchDataFromSourceBatch(engine, sourceConfig, batchElements, periods, orgUnits);
 				allData = allData.concat(batchData);
 			}
@@ -373,9 +370,6 @@ const fetchDataFromDestination = async (engine: any, destinationConfig: DataServ
 				const start = i * pageSize;
 				const end = Math.min((i + 1) * pageSize, dataElements.length);
 				const batchElements = dataElements.slice(start, end);
-
-				console.log(`Fetching destination data batch ${i + 1}/${batchCount}: ${batchElements.length} elements`);
-
 				const batchData = await fetchDataFromDestinationBatch(engine, destinationConfig, batchElements, periods, orgUnits);
 				allData = allData.concat(batchData);
 			}

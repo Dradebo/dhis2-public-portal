@@ -30,16 +30,14 @@ export function StatusIndicator({
 }
 
 export function RunConfigStatus({ configId }: { configId: string }) {
-	const { status, data, isLoading, isError, error } =
+	const { status, isLoading, isError, error } =
 		useDataConfigRunStatus(configId);
-
-	console.log(`RunConfigStatus for ${configId}:`, { status, data, isLoading, isError, error });
 
 	if (isLoading) {
 		return (
 			<div className="flex items-center gap-2">
 				<CircularLoader small />
- 			</div>
+			</div>
 		);
 	}
 

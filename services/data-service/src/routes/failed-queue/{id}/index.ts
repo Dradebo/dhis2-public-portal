@@ -56,7 +56,7 @@ export const GET: Operation = async (
 
             totalFailedMessages = queueInfoResponse.data.messages || 0;
 
-            if (totalFailedMessages > 0 && (includeMessages || onlyQueues)) { 
+            if (totalFailedMessages > 0 && (includeMessages || onlyQueues)) {
                 const fetchCount = onlyQueues ?
                     totalFailedMessages :
                     Math.min(offset + limit * 2, totalFailedMessages);
@@ -65,7 +65,7 @@ export const GET: Operation = async (
                     `${baseURL}/api/queues/${rabbitMQConfig.vhost}/${failedQueueName}/get`,
                     {
                         count: fetchCount,
-                        ackmode: "ack_requeue_true",  
+                        ackmode: "ack_requeue_true",
                         encoding: "auto",
                         truncate: 50000
                     },
@@ -143,7 +143,6 @@ export const GET: Operation = async (
                     }
 
                     if (onlyQueues && sourceQueues.size >= 5) {
-                        console.log(`Found all 5 possible source queues, stopping early at message ${i + 1}`);
                         break;
                     }
                 }
@@ -161,7 +160,6 @@ export const GET: Operation = async (
                 try {
                     const queueInfo = await channel.checkQueue(failedQueueName);
                     totalFailedMessages = queueInfo.messageCount;
-                    console.log(`Fallback: Found ${totalFailedMessages} messages in failed queue`);
                 } catch (queueError) {
                     console.warn(`Failed queue does not exist or error checking queue:`, queueError);
                 }
@@ -247,7 +245,6 @@ export const DELETE: Operation = async (
 
                 const result = await channel.purgeQueue(failedQueueName);
                 clearedMessages = result.messageCount;
-                console.log(`Cleared ${clearedMessages} messages from failed queue: ${failedQueueName}`);
             } catch (queueError) {
                 console.warn(`Failed to clear queue for config ${configId}:`, queueError);
             }
@@ -267,7 +264,7 @@ export const DELETE: Operation = async (
         });
 
     } catch (error) {
-         res.status(500).json({
+        res.status(500).json({
             success: false,
             configId: req.params.id,
             error: "Internal server error",

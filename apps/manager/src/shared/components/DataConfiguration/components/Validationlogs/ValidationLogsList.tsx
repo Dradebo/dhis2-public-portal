@@ -112,18 +112,6 @@ export function ValidationLogsList({ logs, isLoading, error }: ValidationLogsLis
                             {log.message}
                         </span>
 
-                        {/* Metadata indicator */}
-                        {log.metadata && (
-                            <button
-                                onClick={() => {
-                                    console.log('Validation Log Metadata:', log.metadata);
-                                }}
-                                className="text-gray-500 hover:text-gray-700 text-xs cursor-pointer"
-                                title={i18n.t('Click to view metadata in browser console')}
-                            >
-                                📋
-                            </button>
-                        )}
                     </div>
                 ))}
             </div>

@@ -155,7 +155,6 @@ export async function deleteQueues(engine: any, configId: string): Promise<ApiRe
 export async function getConfigStatus(engine: any, configId: string): Promise<ApiResponse> {
     try {
         const response = await queryDataServiceRoute(engine, `/status/${configId}`);
-        console.log(`getConfigStatus response for ${configId}:`, response);
         return response;
     } catch (error) {
         console.error(`getConfigStatus error for ${configId}:`, error);

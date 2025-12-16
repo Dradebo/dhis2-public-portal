@@ -20,19 +20,16 @@ export function DOCXVisualizer({ path }: DOCXVisualizerProps) {
 			setError(null);
 
 			const response = await fetch(path);
-			
+
 			if (!response.ok) {
 				throw new Error(`Failed to load DOCX file: ${response.statusText}`);
 			}
 
 			const arrayBuffer = await response.arrayBuffer();
-			
- 			const result = await mammoth.convertToHtml({ arrayBuffer });
+
+			const result = await mammoth.convertToHtml({ arrayBuffer });
 			setContent(result.value);
-			
- 			if (result.messages.length > 0) {
-				console.log("Mammoth conversion messages:", result.messages);
-			}
+
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to load DOCX content");
 			console.error("Error loading DOCX:", err);
