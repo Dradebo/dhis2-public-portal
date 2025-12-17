@@ -3,96 +3,30 @@ import { useDataEngine } from "@dhis2/app-runtime";
 import { useNavigate } from "@tanstack/react-router";
 import { DataServiceRunStatus } from "@packages/shared/schemas";
 import { DataServiceConfig } from "@packages/shared/schemas";
+import { ValidationDiscrepanciesResponse, ValidationDiscrepancy, ValidationLogEntry, ValidationLogsResponse, ValidationSession, ValidationSummary } from "../interfaces/interfaces";
 
-export interface ValidationLogEntry {
-	id: string;
-	timestamp: string;
-	level: "info" | "warn" | "error" | "success";
-	message: string;
-	metadata?: any;
-}
 
-export interface ValidationDiscrepancy {
-	id: string;
-	dataElement: string;
-	dataElementName: string;
-	orgUnit: string;
-	orgUnitName: string;
-	period: string;
-	categoryOptionCombo: string;
-	attributeOptionCombo?: string;
-	sourceValue: string | number | null;
-	destinationValue: string | number | null;
-	discrepancyType: "missing_in_destination" | "missing_in_source" | "value_mismatch" | "metadata_mismatch";
-	severity: "critical" | "major" | "minor";
-	details?: string;
-}
-
-export interface ValidationSummary {
-	configId: string;
-	status: DataServiceRunStatus;
-	startTime: string;
-	endTime?: string;
-	totalRecords: number;
-	recordsProcessed: number;
-	recordsMatched: number;
-	discrepanciesFound: number;
-	criticalDiscrepancies: number;
-	majorDiscrepancies: number;
-	minorDiscrepancies: number;
-	progress: number;
-	lastActivity?: string;
-}
-
-export interface ValidationLogsResponse {
-	success: boolean;
-	configId: string;
-	logs: ValidationLogEntry[];
-	summary: ValidationSummary;
-	pagination?: {
-		limit: number;
-		offset: number;
-		total: number;
-		hasMore: boolean;
-	};
-}
-
-export interface ValidationDiscrepanciesResponse {
-	success: boolean;
-	configId: string;
-	discrepancies: ValidationDiscrepancy[];
-	summary: {
-		total: number;
-		critical: number;
-		major: number;
-		minor: number;
-		byType: Record<string, number>;
-		byDataElement: Record<string, number>;
-	};
-	pagination?: {
-		limit: number;
-		offset: number;
-		total: number;
-		hasMore: boolean;
-	};
-}
-
-interface ValidationSession {
-	configId: string;
-	status: DataServiceRunStatus;
-	startTime: string;
-	endTime?: string;
-	logs: ValidationLogEntry[];
-	discrepancies: ValidationDiscrepancy[];
-	summary: ValidationSummary;
-	config: {
-		dataItemsConfigIds: string[];
-		runtimeConfig: any;
-		sourceConfig: DataServiceConfig;
-	};
-}
+export type ValidationPhase =
+	| 'initializing'
+	| 'fetching-metadata'
+	| 'fetching-source'
+	| 'fetching-destination'
+	| 'comparing'
+	| 'completed'
+	| 'failed';
 
 const validationSessions = new Map<string, ValidationSession>();
+
+const updatePhase = (configId: string, phase: ValidationPhase, progress: number, message?: string) => {
+	const session = validationSessions.get(configId);
+	if (session) {
+		session.summary.phase = phase;
+		session.summary.progress = progress;
+		session.summary.phaseMessage = message;
+		session.summary.lastActivity = new Date().toISOString();
+	}
+};
+
 const addLogEntry = (configId: string, level: ValidationLogEntry['level'], message: string, metadata?: any) => {
 	const session = validationSessions.get(configId);
 	if (session) {
@@ -468,7 +402,11 @@ const performValidation = async (
 	try {
 		session.status = DataServiceRunStatus.RUNNING;
 		session.summary.status = DataServiceRunStatus.RUNNING;
+
+		// Phase 1: Initializing (0-5%)
+		updatePhase(configId, 'initializing', 0, 'Preparing validation...');
 		addLogEntry(configId, 'info', 'Starting data validation process');
+
 		const savedParams = localStorage.getItem(`validation-params-${configId}`);
 		if (!savedParams) {
 			throw new Error('Validation parameters not found. Please restart validation from the form.');
@@ -476,7 +414,28 @@ const performValidation = async (
 		const fullParams = JSON.parse(savedParams);
 		const periods = fullParams.periods || [];
 		const dataElements = fullParams.dataElements || dataItemsConfigIds;
-		const orgUnits = fullParams.orgUnits || [];
+
+		updatePhase(configId, 'initializing', 3, 'Fetching root organization units...');
+		addLogEntry(configId, 'info', 'Fetching root organization units from source instance...');
+		let orgUnits: string[] = [];
+		try {
+			const rootOrgUnitsResult = await engine.query({
+				orgUnits: {
+					resource: `organisationUnits`,
+					params: {
+						level: 1,
+						fields: 'id,name',
+						paging: false
+					}
+				}
+			});
+			const rootOrgUnits = (rootOrgUnitsResult.orgUnits as any)?.organisationUnits || [];
+			orgUnits = rootOrgUnits.map((ou: any) => ou.id);
+			addLogEntry(configId, 'info', `Using root organization units: ${rootOrgUnits.map((ou: any) => ou.name).join(', ')}`);
+		} catch (error) {
+			addLogEntry(configId, 'warn', 'Failed to fetch root org units, falling back to user-selected org units');
+			orgUnits = fullParams.orgUnits || [];
+		}
 
 		if (periods.length === 0 || dataElements.length === 0 || orgUnits.length === 0) {
 			throw new Error('Missing required validation parameters: periods, data elements, or organization units');
@@ -502,6 +461,10 @@ const performValidation = async (
 				.map(de => de.split('.')[1])
 				.filter(coId => coId && coId !== 'default')
 		)];
+
+		// Phase 2: Fetching metadata (5-15%)
+		updatePhase(configId, 'fetching-metadata', 5, 'Fetching metadata (org units, data elements)...');
+		addLogEntry(configId, 'info', 'Fetching metadata for validation...');
 
 		const metadataPromises = [
 			engine.query({
@@ -544,7 +507,7 @@ const performValidation = async (
 
 		const metadataResults = await Promise.all(metadataPromises);
 		const [orgUnitsMetadata, dataElementsMetadata, categoryOptionCombosMetadata = []] = metadataResults;
-
+		updatePhase(configId, 'fetching-metadata', 15, 'Metadata loaded successfully');
 		const orgUnitNamesMap = new Map(orgUnitsMetadata.map((ou: any) => [ou.id, ou.name]));
 		const dataElementNamesMap = new Map(dataElementsMetadata.map((de: any) => [de.id, de.name]));
 		const categoryOptionComboNamesMap = new Map(categoryOptionCombosMetadata.map((coc: any) => [coc.id, coc.name]));
@@ -564,6 +527,8 @@ const performValidation = async (
 			return dataElementName;
 		};
 
+		// Phase 3: Fetching source data (15-45%)
+		updatePhase(configId, 'fetching-source', 15, 'Fetching data from source instance...');
 		addLogEntry(configId, 'info', 'Fetching data from source instance');
 		const sourceData = await fetchDataFromSource(
 			engine,
@@ -573,14 +538,15 @@ const performValidation = async (
 			orgUnits,
 			paginateByData ? pageSize : undefined
 		);
-
+		updatePhase(configId, 'fetching-source', 45, `Source data fetched: ${sourceData.length} values`);
 		const skipDestination = fullParams.skipDestination || false;
-
 		let destinationData: any[] = [];
-
+		// Phase 4: Fetching destination data (45-75%)
 		if (skipDestination) {
+			updatePhase(configId, 'fetching-destination', 75, 'Skipping destination (source-only mode)');
 			addLogEntry(configId, 'info', 'Skipping destination data fetch as requested (source-only validation)');
 		} else {
+			updatePhase(configId, 'fetching-destination', 45, 'Fetching data from destination instance...');
 			addLogEntry(configId, 'info', 'Fetching data from destination instance');
 			destinationData = await fetchDataFromDestination(
 				engine,
@@ -590,6 +556,7 @@ const performValidation = async (
 				orgUnits,
 				paginateByData ? pageSize : undefined
 			);
+			updatePhase(configId, 'fetching-destination', 75, `Destination data fetched: ${destinationData.length} values`);
 		}
 
 		if (destinationData.length === 0 && sourceData.length > 0) {
@@ -617,16 +584,24 @@ const performValidation = async (
 			addLogEntry(configId, 'warn', 'Proceeding with source-only validation due to destination data limitations');
 		}
 
+		// Phase 5: Comparing data (75-100%)
+		updatePhase(configId, 'comparing', 75, 'Comparing source and destination data...');
+		addLogEntry(configId, 'info', 'Starting data comparison...');
+
 		let recordsProcessed = 0;
 		let recordsMatched = 0;
 		const totalRecords = Math.max(sourceData.length, destinationData.length);
+		const totalSourceRecords = sourceMap.size;
 
 		for (const [key, sourceValue] of sourceMap) {
 			recordsProcessed++;
 
-			// Yield to event loop every 50 records to allow UI updates
-			if (recordsProcessed % 50 === 0) {
+			// Yield to event loop every 100 records to allow UI updates
+			if (recordsProcessed % 100 === 0) {
 				await new Promise(resolve => setTimeout(resolve, 0));
+				// Update progress: 75% + (recordsProcessed / totalSourceRecords) * 20% (up to 95%)
+				const comparisonProgress = 75 + Math.round((recordsProcessed / totalSourceRecords) * 20);
+				updatePhase(configId, 'comparing', comparisonProgress, `Comparing records: ${recordsProcessed.toLocaleString()} / ${totalSourceRecords.toLocaleString()}`);
 			}
 
 			if (!destinationMap.has(key)) {
@@ -686,11 +661,6 @@ const performValidation = async (
 		}
 
 		for (const [key, destValue] of destinationMap) {
-			// Yield to event loop every 50 records to allow UI updates
-			if (recordsProcessed % 50 === 0) {
-				await new Promise(resolve => setTimeout(resolve, 0));
-			}
-
 			if (!sourceMap.has(key)) {
 				const dataElementDisplayName = buildDataElementDisplayName(destValue.dataElement, destValue.categoryOptionCombo);
 				const orgUnitName = orgUnitNamesMap.get(destValue.orgUnit) as string || destValue.orgUnit;
@@ -712,6 +682,8 @@ const performValidation = async (
 		}
 
 
+		// Phase 6: Completed (100%)
+		updatePhase(configId, 'completed', 100, 'Validation completed');
 		session.status = DataServiceRunStatus.COMPLETED;
 		session.summary.status = DataServiceRunStatus.COMPLETED;
 		session.summary.endTime = new Date().toISOString();
@@ -729,6 +701,7 @@ const performValidation = async (
 		return { success: true, message: 'Validation completed successfully' };
 
 	} catch (error) {
+		updatePhase(configId, 'failed', session.summary.progress, 'Validation failed');
 		session.status = DataServiceRunStatus.FAILED;
 		session.summary.status = DataServiceRunStatus.FAILED;
 		session.summary.endTime = new Date().toISOString();

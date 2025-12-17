@@ -1,8 +1,9 @@
 import React from 'react';
 import { LinearLoader, Tag } from '@dhis2/ui';
 import i18n from '@dhis2/d2-i18n';
-import { ValidationSummary } from './hooks/validation';
+import { ValidationPhase } from './hooks/validation';
 import { DataServiceRunStatus } from '@packages/shared/schemas';
+import { ValidationSummary } from './interfaces/interfaces';
 
 interface ValidationProgressProps {
     status?: ValidationSummary;
@@ -38,15 +39,23 @@ export function ValidationProgress({ status }: ValidationProgressProps) {
         <div className="space-y-3">
             {/* Status and Progress */}
             <div className="flex items-center justify-between">
-                <Tag positive={status.status === DataServiceRunStatus.COMPLETED}>
-                    {getStatusText(status.status)}
-                </Tag>
+                <div className="flex items-center gap-2">
+                    <Tag positive={status.status === DataServiceRunStatus.COMPLETED}>
+                        {getStatusText(status.status)}
+                    </Tag>
+                </div>
 
                 <div className="text-right">
                     <div className="text-lg font-semibold">{status.progress}%</div>
-                    <div className="text-sm text-gray-600">
-                        {status.recordsProcessed.toLocaleString()} / {status.totalRecords.toLocaleString()}
-                    </div>
+                    {status.phase === 'comparing' && status.totalRecords > 0 ? (
+                        <div className="text-sm text-gray-600">
+                            {status.recordsProcessed.toLocaleString()} / {status.totalRecords.toLocaleString()}
+                        </div>
+                    ) : status.phaseMessage ? (
+                        <div className="text-sm text-gray-600">
+                            {status.phaseMessage}
+                        </div>
+                    ) : null}
                 </div>
             </div>
 
