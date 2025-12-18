@@ -24,6 +24,7 @@ export interface ConfigStatusResponse {
 		metadataUpload?: QueueStatusResult;
 		dataDownload?: QueueStatusResult;
 		dataUpload?: QueueStatusResult;
+		dataDeletion?: QueueStatusResult;
 	};
 	health: {
 		healthy: boolean;
@@ -70,6 +71,7 @@ export function useDataConfigRunStatus(id: string) {
 			queues.metadataUpload?.status,
 			queues.dataDownload?.status,
 			queues.dataUpload?.status,
+			queues.dataDeletion?.status,
 		].filter(Boolean);
 
 		if (statuses.length === 0) {

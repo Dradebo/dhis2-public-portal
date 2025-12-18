@@ -118,17 +118,19 @@ export function ValidationLogsPage({ configId }: ValidationLogsPageProps) {
                     >
                         {i18n.t('Validation Logs')}
                     </Tab>
-                    <Tab
-                        selected={activeTab === 'discrepancies'}
-                        onClick={() => setActiveTab('discrepancies')}
-                    >
-                        {i18n.t('Discrepancies')}
-                        {hasDiscrepancies && (
-                            <span className="ml-1 px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full">
-                                {validationDiscrepancies.data?.summary?.total}
-                            </span>
-                        )}
-                    </Tab>
+                    {!isValidationRunning && hasDiscrepancies && (
+                        <Tab
+                            selected={activeTab === 'discrepancies'}
+                            onClick={() => setActiveTab('discrepancies')}
+                        >
+                            {i18n.t('Discrepancies')}
+                            {hasDiscrepancies && (
+                                <span className="ml-1 px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full">
+                                    {validationDiscrepancies.data?.summary?.total}
+                                </span>
+                            )}
+                        </Tab>
+                    )}
                 </TabBar>
 
                 <div className="p-4">
@@ -140,7 +142,7 @@ export function ValidationLogsPage({ configId }: ValidationLogsPageProps) {
                         />
                     )}
 
-                    {activeTab === 'discrepancies' && (
+                    {activeTab === 'discrepancies' && !isValidationRunning && hasDiscrepancies && (
                         <ValidationDiscrepancies
                             discrepancies={validationDiscrepancies.data?.discrepancies || []}
                             summary={validationDiscrepancies.data?.summary}

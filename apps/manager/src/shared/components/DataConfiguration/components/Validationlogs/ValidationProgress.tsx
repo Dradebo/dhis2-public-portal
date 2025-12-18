@@ -1,7 +1,6 @@
 import React from 'react';
 import { LinearLoader, Tag } from '@dhis2/ui';
 import i18n from '@dhis2/d2-i18n';
-import { ValidationPhase } from './hooks/validation';
 import { DataServiceRunStatus } from '@packages/shared/schemas';
 import { ValidationSummary } from './interfaces/interfaces';
 
@@ -37,7 +36,6 @@ export function ValidationProgress({ status }: ValidationProgressProps) {
 
     return (
         <div className="space-y-3">
-            {/* Status and Progress */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Tag positive={status.status === DataServiceRunStatus.COMPLETED}>
@@ -58,13 +56,10 @@ export function ValidationProgress({ status }: ValidationProgressProps) {
                     ) : null}
                 </div>
             </div>
-
-            {/* Progress Bar */}
             {status.status === DataServiceRunStatus.RUNNING && (
                 <LinearLoader amount={status.progress} />
             )}
 
-            {/* Key Metrics Only */}
             <div className="flex gap-6 text-sm">
                 <span>
                     <strong className="text-green-600">{status.recordsMatched.toLocaleString()}</strong> {i18n.t('matched')}
@@ -72,11 +67,6 @@ export function ValidationProgress({ status }: ValidationProgressProps) {
                 <span>
                     <strong className="text-orange-600">{status.discrepanciesFound.toLocaleString()}</strong> {i18n.t('issues')}
                 </span>
-                {status.criticalDiscrepancies > 0 && (
-                    <span>
-                        <strong className="text-red-600">{status.criticalDiscrepancies}</strong> {i18n.t('critical')}
-                    </span>
-                )}
             </div>
         </div>
     );

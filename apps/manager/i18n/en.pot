@@ -5,8 +5,8 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"POT-Creation-Date: 2025-12-17T06:00:21.416Z\n"
-"PO-Revision-Date: 2025-12-17T06:00:21.418Z\n"
+"POT-Creation-Date: 2025-12-18T07:38:56.070Z\n"
+"PO-Revision-Date: 2025-12-18T07:38:56.070Z\n"
 
 msgid "Could not get Appearance configurations"
 msgstr "Could not get Appearance configurations"
@@ -580,6 +580,15 @@ msgstr "No discrepancies found"
 msgid "Great! No discrepancies were found between the source and destination data."
 msgstr "Great! No discrepancies were found between the source and destination data."
 
+msgid "Critical"
+msgstr "Critical"
+
+msgid "Major"
+msgstr "Major"
+
+msgid "Minor"
+msgstr "Minor"
+
 msgid "Download"
 msgstr "Download"
 
@@ -630,9 +639,6 @@ msgstr "matched"
 
 msgid "issues"
 msgstr "issues"
-
-msgid "critical"
-msgstr "critical"
 
 msgid ""
 "Configuration saved, but queue creation failed. Queues will be created "

@@ -119,7 +119,7 @@ export function ValidationDiscrepancies({ discrepancies, summary, isLoading, err
             case 'major':
                 return 'bg-yellow-100 border-yellow-300';
             case 'minor':
-                return 'bg-blue-100 border-blue-300';
+                return 'bg-yellow-100 border-yellow-300';
             default:
                 return '';
         }
@@ -132,7 +132,7 @@ export function ValidationDiscrepancies({ discrepancies, summary, isLoading, err
             case 'major':
                 return 'text-yellow-700';
             case 'minor':
-                return 'text-blue-700';
+                return 'text-yellow-700';
             default:
                 return '';
         }
@@ -179,7 +179,17 @@ export function ValidationDiscrepancies({ discrepancies, summary, isLoading, err
 
     return (
         <div>
-            <div className="mb-4 flex justify-end">
+            <div className="mb-4 flex justify-between items-center">
+                <div className="flex gap-6">
+                    <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-red-100 border border-red-300 rounded"></div>
+                        <span className="text-sm  font-medium">{i18n.t('When destination data is greater than source data')}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-yellow-100 border border-yellow-300 rounded"></div>
+                        <span className="text-sm  font-medium">{i18n.t('When source data is greater than destination data')}</span>
+                    </div>
+                </div>
                 <Button
                     small
                     onClick={handleDownloadCSV}
