@@ -13,22 +13,9 @@ import {
 } from '@dhis2/ui';
 import i18n from '@dhis2/d2-i18n';
 import { PeriodUtility, PeriodTypeCategory } from '@hisptz/dhis2-utils';
+import { exportDiscrepanciesToExcel } from './exportDiscrepanciesToExcel';
+import { ValidationDiscrepancy } from './interfaces/interfaces';
 
-interface ValidationDiscrepancy {
-    id: string;
-    dataElement: string;
-    dataElementName: string;
-    orgUnit: string;
-    orgUnitName: string;
-    period: string;
-    categoryOptionCombo: string;
-    attributeOptionCombo?: string;
-    sourceValue: string | number | null;
-    destinationValue: string | number | null;
-    discrepancyType: "missing_in_destination" | "missing_in_source" | "value_mismatch" | "metadata_mismatch";
-    severity: "critical" | "major" | "minor";
-    details?: string;
-}
 
 interface DiscrepancySummary {
     total: number;
@@ -47,62 +34,8 @@ interface ValidationDiscrepanciesProps {
 }
 
 export function ValidationDiscrepancies({ discrepancies, summary, isLoading, error }: ValidationDiscrepanciesProps) {
-     const handleDownloadCSV = () => {
-        if (!discrepancies.length) return;
-         const periodDataMap = new Map();
-        const dataElements = new Set();
-        const dataElementNames = new Map();
-
-        discrepancies.forEach((discrepancy) => {
-            const dataElementCombo = discrepancy.dataElement;
-            dataElements.add(dataElementCombo);
-            dataElementNames.set(dataElementCombo, discrepancy.dataElementName);
-            if (!periodDataMap.has(discrepancy.period)) {
-                periodDataMap.set(discrepancy.period, new Map());
-            }
-            const periodMap = periodDataMap.get(discrepancy.period);
-            periodMap.set(dataElementCombo, {
-                source: discrepancy.sourceValue,
-                destination: discrepancy.destinationValue
-            });
-        });
-
-        const dataElementsList = Array.from(dataElements);
-        const periods = Array.from(periodDataMap.keys()).sort();
-
-        // Build CSV header: Period, then for each data element: Source, Destination
-        const header = [
-            'Period',
-            ...dataElementsList.flatMap(de => [
-                `${dataElementNames.get(de)} (Source)`,
-                `${dataElementNames.get(de)} (Destination)`
-            ])
-        ];
-
-        // Build rows
-        const rows = periods.map(period => {
-            const periodMap = periodDataMap.get(period);
-            return [
-                formatPeriod(period),
-                ...dataElementsList.flatMap(de => {
-                    const data = periodMap.get(de) || {};
-                    return [data.source ?? '', data.destination ?? ''];
-                })
-            ];
-        });
-
-        const csvContent = [header, ...rows]
-            .map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
-            .join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'validation-discrepancies-table.csv';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+    const handleDownloadExcel = async () => {
+        await exportDiscrepanciesToExcel(discrepancies);
     };
 
     const formatValue = (value: string | number | null) => {
@@ -192,10 +125,10 @@ export function ValidationDiscrepancies({ discrepancies, summary, isLoading, err
                 </div>
                 <Button
                     small
-                    onClick={handleDownloadCSV}
+                    onClick={handleDownloadExcel}
                     disabled={discrepancies.length === 0}
                 >
-                    {i18n.t('Download')}
+                    {i18n.t('Download Excel')}
                 </Button>
             </div>
             {(() => {
@@ -276,9 +209,9 @@ export function ValidationDiscrepancies({ discrepancies, summary, isLoading, err
                                                     const sourceValue = data?.source ?? null;
                                                     const destinationValue = data?.destination ?? null;
                                                     const hasDiscrepancy = data?.hasDiscrepancy ?? false;
- 
-                                                    const discrepancy = discrepancies.find(d => 
-                                                        d.dataElement === dataElementCombo && 
+
+                                                    const discrepancy = discrepancies.find(d =>
+                                                        d.dataElement === dataElementCombo &&
                                                         d.period === period
                                                     );
                                                     const severity = discrepancy?.severity || 'minor';
