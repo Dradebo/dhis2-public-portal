@@ -3,7 +3,6 @@ import { uploadMetadataFile } from "@/clients/dhis2";
 import { ProcessedMetadata } from "./metadata-download";
 import { processConfigurationFromQueue } from "./utils/configuration-import";
 import * as fs from "node:fs";
-import { updateProgress, completeJob } from "@/utils/progress-tracker";
 
 export async function uploadMetadataFromQueue(jobData: any): Promise<void> {
   try {
@@ -31,8 +30,6 @@ export async function uploadMetadataFromQueue(jobData: any): Promise<void> {
     }
 
     await uploadMetadata(metadata, configId, totalItems);
-
-    await completeJob(configId, 'metadata-upload');
     logger.info(`Metadata upload job completed successfully for config: ${configId}`);
 
   } catch (error: any) {
@@ -161,33 +158,18 @@ export async function uploadMetadata(metadata: ProcessedMetadata, configId?: str
 
     // Upload files in the correct order (dependencies first)
     logger.info("Starting upload of metadata files...");
-
-    let currentStep = 0;
-
-    // Upload legend sets first (they don't depend on anything)
-    currentStep++;
-    if (configId) await updateProgress(configId, 'metadata-upload', totalItems, currentStep);
     await uploadMetadataFile(legendSetsPath);
 
     // Upload indicator types (needed for indicators)
-    currentStep++;
-    if (configId) await updateProgress(configId, 'metadata-upload', totalItems, currentStep);
     await uploadMetadataFile(indicatorTypesPath);
 
     // Upload categories (needed for data elements) - split if too large
-    logger.info("Uploading Categories, CategoryCombos, CategoryOptions & CategoryOptionCombos...");
-    currentStep++;
-    if (configId) await updateProgress(configId, 'metadata-upload', totalItems, currentStep);
     await uploadCategoriesMetadata(metadata.categories, tempDir);
 
     // Upload data items (indicators and data elements)
-    currentStep++;
-    if (configId) await updateProgress(configId, 'metadata-upload', totalItems, currentStep);
     await uploadMetadataFile(dataItemsPath);
 
     // Upload visualizations last (they depend on data items)
-    currentStep++;
-    if (configId) await updateProgress(configId, 'metadata-upload', totalItems, currentStep);
     await uploadMetadataFile(visualizationsPath);
 
     logger.info("Cleaning up temporary files...");

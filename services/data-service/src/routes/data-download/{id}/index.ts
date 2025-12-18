@@ -1,8 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import logger from '@/logging';
 import { Operation } from 'express-openapi';
-import { updateProgress } from '@/utils/progress-tracker';
-import { dataDownloadBodySchema } from '@packages/shared/schemas';
+ import { dataDownloadBodySchema } from '@packages/shared/schemas';
 import { AxiosError } from 'axios';
 import { fromError } from 'zod-validation-error';
 import { downloadAndQueueData } from '@/services/data-migration/data-download';
@@ -47,10 +46,6 @@ export const GET: Operation = async (
         const requestData = parseDataDownloadRequestData(req.query);
         const parsedBody = dataDownloadBodySchema.parse(requestData);
         
-        // Initialize progress tracking
-        const totalExpectedJobs = parsedBody.dataItemsConfigIds.length * parsedBody.runtimeConfig.periods.length;
-        await updateProgress(configId, 'data-download', totalExpectedJobs, 0);
-
         await downloadAndQueueData({
             mainConfigId: configId,
             dataItemsConfigIds: parsedBody.dataItemsConfigIds,
@@ -98,11 +93,7 @@ export const POST: Operation = async (
     try {
         const { id: configId } = req.params;
         const parsedBody = dataDownloadBodySchema.parse(req.body);
-        
-        // Initialize progress tracking
-        const totalExpectedJobs = parsedBody.dataItemsConfigIds.length * parsedBody.runtimeConfig.periods.length;
-        await updateProgress(configId, 'data-download', totalExpectedJobs, 0);
-
+       
         await downloadAndQueueData({
             mainConfigId: configId,
             dataItemsConfigIds: parsedBody.dataItemsConfigIds,

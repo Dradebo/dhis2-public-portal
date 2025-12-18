@@ -29,7 +29,6 @@ import {
     saveDataItemMappings,
     DataItemMapping
 } from "../../utils/data-item-mapping";
-import { startJob, updateProgress, completeJob } from "@/utils/progress-tracker";
 
 export interface ProcessedMetadata {
     legendSets: any;
@@ -69,30 +68,15 @@ export async function downloadAndQueueMetadata(options: MetadataDownloadOptions)
     try {
         const { configId, metadataSource, selectedVisualizations = [], selectedMaps = [], selectedDashboards = [], totalItems = 0 } = options;
         logger.info(`Starting metadata download and queue process for config: ${configId}`);
-
-
-        let actualTotalItems = totalItems;
-        if (actualTotalItems === 0) {
-            actualTotalItems = selectedVisualizations.length + selectedMaps.length + selectedDashboards.length;
-            await startJob(configId, 'metadata-download', actualTotalItems);
-        }
-
         const metadata = await downloadMetadata(options);
-        await updateProgress(configId, 'metadata-download', actualTotalItems, actualTotalItems);
-
-        // Start metadata upload tracking
-        const uploadItemCount = 5;
-        await startJob(configId, 'metadata-upload', uploadItemCount);
-
         await generateAndSaveDataItemMappings(metadata, configId, options);
 
         await pushToQueue(configId, 'metadataUpload', {
             metadata,
             configId,
-            totalItems: uploadItemCount,
             downloadedAt: new Date().toISOString()
         });
-        
+
         if (metadataSource === 'flexiportal-config') {
             const configuration = await exportConfiguration(configId);
 
@@ -102,9 +86,6 @@ export async function downloadAndQueueMetadata(options: MetadataDownloadOptions)
                 timestamp: new Date().toISOString()
             });
         }
-
-
-        await completeJob(configId, 'metadata-download');
         logger.info(`Metadata successfully downloaded and queued for upload (config: ${configId})`);
     } catch (error) {
         logger.error(`Error during download and queue process for config ${options.configId}:`, error);
@@ -202,13 +183,6 @@ export async function downloadMetadata(options: MetadataDownloadOptions): Promis
 
             visualizations = allVisualizationIds.map(id => ({ id }));
             maps = allMapIds.map(id => ({ id }));
-
-            const totalSelected = (options.selectedVisualizations?.length || 0) +
-                (options.selectedMaps?.length || 0) +
-                (options.selectedDashboards?.length || 0);
-            if (totalSelected > 0) {
-                await updateProgress(configId, 'metadata-download', totalSelected, totalSelected);
-            }
         }
 
         logger.info("Fetching Map Configs...");

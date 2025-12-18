@@ -2,7 +2,6 @@ import { NextFunction, Request, Response } from 'express';
 import logger from '@/logging';
 import { pushToQueue } from '@/rabbit/publisher';
 import { Operation } from 'express-openapi';
-import { startJob } from '@/utils/progress-tracker';
 
  function parseMetadataRequestData(query: any) {
     const data: any = {
@@ -56,14 +55,7 @@ export const GET: Operation = async (
             });
         }
 
-        
-
-        // Calculate total items to process
         const totalItems = selectedVisualizations.length + selectedMaps.length + selectedDashboards.length;
-
-        // Start progress tracking
-        await startJob(configId, 'metadata-download', totalItems);
-
         await pushToQueue(configId, 'metadataDownload', {
             configId,
             metadataSource,
@@ -119,12 +111,7 @@ export const POST: Operation = async (
 
         logger.info(`Metadata download POST request for config: ${configId}`, { data });
 
-        // Calculate total items to process
         const totalItems = data.selectedVisualizations.length + data.selectedMaps.length + data.selectedDashboards.length;
-
-        // Start progress tracking
-        await startJob(configId, 'metadata-download', totalItems);
-
         await pushToQueue(configId, 'metadataDownload', {
             configId,
             metadataSource: data.metadataSource,
