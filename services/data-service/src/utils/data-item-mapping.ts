@@ -4,6 +4,7 @@ import { getDefaultCategoryValues, getDestinationDefaultCategoryValues } from ".
 import { fetchItemsInParallel } from "./parallel-fetch";
 import { DatastoreNamespaces } from "@packages/shared/constants";
 import { uniq, compact } from "lodash";
+import { ProcessedMetadata } from "@/services/metadata-migration/metadata-download";
 
 export interface DataItemMapping {
     id: string;
@@ -13,6 +14,41 @@ export interface DataItemMapping {
 export interface DataItemMappings {
     dataItems: DataItemMapping[];
 }
+
+export async function generateAndSaveDataItemMappings(
+    metadata: ProcessedMetadata,
+    configId: string,
+): Promise<void> {
+    try {
+        logger.info(`Generating data item mappings for config: ${configId}`);
+        const dataElementIds = metadata.dataItems.dataElements.map((de: any) => de.id);
+        const programIndicatorIds = metadata.programIndicatorIds || [];
+
+        if (dataElementIds.length === 0 && programIndicatorIds.length === 0) {
+            logger.info(`No data elements or program indicators found, skipping mapping generation`);
+            return;
+        }
+        logger.info(`Generating mappings for ${dataElementIds.length} data elements and ${programIndicatorIds.length} program indicators`);
+        const configUrl = `dataStore/${DatastoreNamespaces.DATA_SERVICE_CONFIG}/${configId}`;
+        const { data: config } = await dhis2Client.get(configUrl);
+        const routeId = config.source?.routeId;
+        const mappings = await generateDataItemMappings(
+            dataElementIds,
+            programIndicatorIds,
+            configId,
+            routeId
+        );
+        await saveDataItemMappings(mappings, configId, routeId);
+        metadata.mappings = {
+            dataItems: mappings
+        };
+        logger.info(`Successfully generated and saved ${mappings.length} data item mappings`);
+    } catch (error) {
+        logger.error(`Error generating and saving data item mappings:`, error);
+        logger.warn(`Continuing with metadata download despite mapping error`);
+    }
+}
+
 
 /**
  * Generate mappings for data elements and program indicators
@@ -81,7 +117,8 @@ async function generateDataElementMappings(
         logger.info(`Generating data element mappings for ${dataElementIds.length} data elements`);
 
         const sourceDefaults = await getDefaultCategoryValues(routeId);
-        const client = routeId ? await createSourceClient(routeId) : dhis2Client;
+        // const client = routeId ? await createSourceClient(routeId) : dhis2Client;
+        const client = dhis2Client;
 
         const dataElements = await fetchItemsInParallel(
             client,
@@ -322,7 +359,7 @@ export async function updateDataItemMappings(
             logger.warn(`No existing mappings found for ${datastoreKey}, creating new entry.`);
         }
 
-         const existingItems = existingData?.dataItems || [];
+        const existingItems = existingData?.dataItems || [];
         const mergedItems = [...existingItems, ...mappings];
 
         const updatedData: DataItemMappings = {

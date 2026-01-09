@@ -19,6 +19,7 @@ export interface DataDownloadOptions {
     mainConfigId: string;
     dataItemsConfigIds: Array<string>;
     runtimeConfig: DataServiceRuntimeConfig;
+    isDelete?: boolean;
 }
 
 export interface DataProcessingJob {
@@ -28,11 +29,12 @@ export interface DataProcessingJob {
     config: DataServiceDataSourceItemsConfig;
     runtimeConfig: DataServiceRuntimeConfig;
     overrideDimensions?: any;
+    isDelete?: boolean;
 }
 
 export async function downloadAndQueueData(options: DataDownloadOptions): Promise<void> {
     try {
-        const { mainConfigId, dataItemsConfigIds, runtimeConfig } = options;
+        const { mainConfigId, dataItemsConfigIds, runtimeConfig, isDelete } = options;
         logger.info(`Starting data download and queue process for config: ${mainConfigId}`);
 
         const mainConfig = await fetchMainConfiguration(mainConfigId);
@@ -40,7 +42,7 @@ export async function downloadAndQueueData(options: DataDownloadOptions): Promis
             return mainConfig.itemsConfig.find(({ id: configId }) => configId === id);
         }));
         checkOrCreateFolder(`outputs/${mainConfigId}`);
-        await enqueueDataDownloadTasks(mainConfig, runtimeConfig, dataItemConfigs);
+        await enqueueDataDownloadTasks(mainConfig, runtimeConfig, dataItemConfigs, isDelete);
     } catch (error) {
         logger.error(`Error during download and queue process for config ${options.mainConfigId}:`, error);
         throw error;
@@ -67,7 +69,8 @@ async function fetchMainConfiguration(configId: string): Promise<DataServiceConf
 async function enqueueDataDownloadTasks(
     mainConfig: DataServiceConfig,
     runtimeConfig: DataServiceRuntimeConfig,
-    dataItemConfigs: DataServiceDataSourceItemsConfig[]
+    dataItemConfigs: DataServiceDataSourceItemsConfig[],
+    isDelete?: boolean
 ): Promise<void> {
     const configId = mainConfig.id;
 
@@ -79,21 +82,22 @@ async function enqueueDataDownloadTasks(
                 periodId,
                 config,
                 runtimeConfig,
+                isDelete: isDelete || false,
             };
-             await pushToQueue(configId, 'dataDownload', message, {
+            await pushToQueue(configId, 'dataDownload', message, {
                 queuedAt: new Date().toISOString()
             });
-         }
+        }
     }
- }
+}
 
 export async function downloadData(jobData: any): Promise<void> {
     try {
-        const { mainConfigId } = jobData;
+        const { mainConfigId, isDelete } = jobData;
         const mainConfigForClient = await fetchMainConfiguration(mainConfigId);
-        const client = createDownloadClient({ config: mainConfigForClient });
+        const client = isDelete ? dhis2Client : createDownloadClient({ config: mainConfigForClient });
 
-        const shouldPaginate = await handlePagination(jobData, client);
+        const shouldPaginate = await handlePagination(jobData);
         if (shouldPaginate) {
             return;
         }
@@ -114,8 +118,8 @@ export async function downloadData(jobData: any): Promise<void> {
 
 
 
-async function handlePagination(jobData: any, client: any): Promise<boolean> {
-    const { mainConfigId, mainConfig, periodId, config, runtimeConfig, overrideDimensions } = jobData;
+async function handlePagination(jobData: any): Promise<boolean> {
+    const { mainConfigId, mainConfig, periodId, config, runtimeConfig, overrideDimensions, isDelete } = jobData;
 
     if (overrideDimensions) {
         return false;
@@ -156,6 +160,7 @@ async function handlePagination(jobData: any, client: any): Promise<boolean> {
             periodId,
             config,
             runtimeConfig,
+            isDelete: isDelete || false,
             overrideDimensions: paginatedDimensions,
         }, {
             queuedAt: new Date().toISOString(),
@@ -168,7 +173,7 @@ async function handlePagination(jobData: any, client: any): Promise<boolean> {
 }
 
 async function processDataDownload(jobData: any, client: any): Promise<void> {
-    const { mainConfigId, mainConfig, periodId, config, runtimeConfig, overrideDimensions } = jobData;
+    const { mainConfigId, mainConfig, periodId, config, runtimeConfig, overrideDimensions, isDelete } = jobData;
 
     const dimensions = overrideDimensions || getDimensions({
         runtimeConfig,
@@ -211,13 +216,26 @@ async function processDataDownload(jobData: any, client: any): Promise<void> {
             itemsConfig: config,
         });
 
-        await pushToQueue(mainConfigId, 'dataUpload', {
-            mainConfigId,
-            filename,
-            payload: processedData,
-        }, {
-            queuedAt: new Date().toISOString(),
-            downloadedFrom: config.id
-        });
+        if (isDelete) {
+            await pushToQueue(mainConfigId, 'dataDeletion', {
+                mainConfigId,
+                filename,
+                isDelete: true,
+                payload: processedData,
+            }, {
+                queuedAt: new Date().toISOString(),
+                downloadedFrom: config.id
+            });
+        } else {
+            await pushToQueue(mainConfigId, 'dataUpload', {
+                mainConfigId,
+                filename,
+                payload: processedData,
+            }, {
+                queuedAt: new Date().toISOString(),
+                downloadedFrom: config.id
+            });
+        }
+
     }
 }

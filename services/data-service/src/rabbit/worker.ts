@@ -2,7 +2,7 @@ import { Channel, ConsumeMessage } from "amqplib";
 import figlet from "figlet";
 import logger from "@/logging";
 import { connectRabbit, getConnection } from "./connection";
-import { uploadDataFromQueue } from "@/services/data-migration/data-upload";
+import { dataFromQueue } from "@/services/data-migration/data-upload";
 import { uploadMetadataFromQueue } from "@/services/metadata-migration/metadata-upload";
 import { downloadAndQueueMetadata } from "@/services/metadata-migration/metadata-download";
 import { deleteData } from "@/services/data-migration/data-delete";
@@ -25,15 +25,15 @@ const handlerMap: Record<string, (messageContent: any) => Promise<void>> = {
   },
 
   "dataDeletion": async (messageContent) => {
-    const { mainConfigId } = messageContent;
-    logger.info(`Processing data deletion for config: ${mainConfigId}`);
-    await deleteData(messageContent);
+    const { mainConfigId, filename } = messageContent;
+    logger.info(`Processing data deletion for config: ${mainConfigId}, file: ${filename}`);
+    await dataFromQueue(messageContent);
   },
 
   "dataUpload": async (messageContent) => {
     const { mainConfigId, filename } = messageContent;
     logger.info(`Processing data upload for config: ${mainConfigId}, file: ${filename}`);
-    await uploadDataFromQueue(messageContent);
+    await dataFromQueue(messageContent);
   },
 
   "metadataDownload": async (messageContent) => {

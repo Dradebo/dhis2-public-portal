@@ -106,9 +106,10 @@ export function RunConfigForm({
 				const deletionRequest = {
 					dataItemsConfigIds: data.dataItemsConfigIds,
 					runtimeConfig: data.runtimeConfig,
+					isDelete: true
 				};
 
-				result = await startDataDeletion(engine, config.id, deletionRequest, serverVersion);
+				result = await downloadData(engine, config.id, deletionRequest, serverVersion);
 			} else if (data.service === "data-validation") {
 				const validationRequest = {
 					dataItemsConfigIds: data.dataItemsConfigIds,

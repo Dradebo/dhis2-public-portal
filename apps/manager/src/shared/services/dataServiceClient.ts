@@ -109,13 +109,17 @@ export async function downloadData(engine: any, configId: string, data: any, ser
         if (data.runtimeConfig) {
             queryParams.set('runtimeConfig', JSON.stringify(data.runtimeConfig));
         }
+        if (data.isDelete) {
+            queryParams.set('isDelete', JSON.stringify(data.isDelete));
+        }
 
         const endpoint = `/data-download/${configId}?${queryParams.toString()}`;
         return queryDataServiceRoute(engine, endpoint);
     } else {
         return executeDataServiceRoute(engine, `/data-download/${configId}`, {
             dataItemsConfigIds: data.dataItemsConfigIds || [],
-            runtimeConfig: data.runtimeConfig || {}
+            runtimeConfig: data.runtimeConfig || {},
+            isDelete: data.isDelete || false,
         }, 'create');
     }
 }

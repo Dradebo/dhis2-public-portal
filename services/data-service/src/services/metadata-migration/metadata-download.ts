@@ -66,11 +66,10 @@ export interface MetadataDownloadOptions {
 
 export async function downloadAndQueueMetadata(options: MetadataDownloadOptions): Promise<void> {
     try {
-        const { configId, metadataSource, selectedVisualizations = [], selectedMaps = [], selectedDashboards = [], totalItems = 0 } = options;
+        const { configId, metadataSource } = options;
         logger.info(`Starting metadata download and queue process for config: ${configId}`);
         const metadata = await downloadMetadata(options);
-        await generateAndSaveDataItemMappings(metadata, configId, options);
-
+ 
         await pushToQueue(configId, 'metadataUpload', {
             metadata,
             configId,
@@ -94,40 +93,6 @@ export async function downloadAndQueueMetadata(options: MetadataDownloadOptions)
 }
 
 
-async function generateAndSaveDataItemMappings(
-    metadata: ProcessedMetadata,
-    configId: string,
-    options: MetadataDownloadOptions
-): Promise<void> {
-    try {
-        logger.info(`Generating data item mappings for config: ${configId}`);
-        const dataElementIds = metadata.dataItems.dataElements.map((de: any) => de.id);
-        const programIndicatorIds = metadata.programIndicatorIds || [];
-
-        if (dataElementIds.length === 0 && programIndicatorIds.length === 0) {
-            logger.info(`No data elements or program indicators found, skipping mapping generation`);
-            return;
-        }
-        logger.info(`Generating mappings for ${dataElementIds.length} data elements and ${programIndicatorIds.length} program indicators`);
-        const configUrl = `dataStore/${DatastoreNamespaces.DATA_SERVICE_CONFIG}/${configId}`;
-        const { data: config } = await dhis2Client.get(configUrl);
-        const routeId = config.source?.routeId;
-        const mappings = await generateDataItemMappings(
-            dataElementIds,
-            programIndicatorIds,
-            configId,
-            routeId
-        );
-        await saveDataItemMappings(mappings, configId, routeId);
-        metadata.mappings = {
-            dataItems: mappings
-        };
-        logger.info(`Successfully generated and saved ${mappings.length} data item mappings`);
-    } catch (error) {
-        logger.error(`Error generating and saving data item mappings:`, error);
-        logger.warn(`Continuing with metadata download despite mapping error`);
-    }
-}
 
 
 export async function downloadMetadata(options: MetadataDownloadOptions): Promise<ProcessedMetadata> {

@@ -92,6 +92,7 @@ export type DataServiceRuntimeConfig = z.infer<typeof dataServiceRuntimeConfig>;
 export const dataDownloadBodySchema = z.object({
 	runtimeConfig: dataServiceRuntimeConfig,
 	dataItemsConfigIds: z.string().array(),
+	isDelete: z.boolean().optional(),
 });
 
 export type DataDownloadBody = z.infer<typeof dataDownloadBodySchema>;

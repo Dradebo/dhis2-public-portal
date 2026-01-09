@@ -12,22 +12,22 @@ export interface DataUploadJob {
     downloadedFrom?: string;
 }
 
-export async function uploadDataFromQueue(jobData: any): Promise<void> {
+export async function dataFromQueue(jobData: any): Promise<void> {
     try {
-        const { mainConfigId, filename, payload, queuedAt, downloadedFrom } = jobData;
+        const { mainConfigId, filename, payload, isDelete } = jobData;
 
         if (!validateUploadJobData(jobData)) {
-            throw new Error(`Invalid upload job data for config: ${mainConfigId}`);
+            throw new Error(`Invalid job data for config: ${mainConfigId}`);
         }
         if (payload) {
-            await uploadDataFromPayload({ payload, configId: mainConfigId, filename });
+            await dataFromPayload({ payload, configId: mainConfigId, filename, isDelete });
         } else if (filename) {
-            await uploadDataFromFile({ filename, configId: mainConfigId });
+            await dataFromFile({ filename, configId: mainConfigId, isDelete });
         } else {
-            throw new Error(`No payload or filename provided for upload job`);
+            throw new Error(`No payload or filename provided for job`);
         }
     } catch (error: any) {
-        logger.error(`Error processing data upload job:`, {
+        logger.error(`Error processing data job:`, {
             error: {
                 message: error.message,
                 stack: error.stack,
@@ -70,12 +70,14 @@ export async function completeUpload(configId: string): Promise<void> {
 }
 
 
-export async function uploadDataFromFile({
+export async function dataFromFile({
     filename,
     configId,
+    isDelete,
 }: {
     filename: string;
     configId: string;
+    isDelete?: boolean;
 }): Promise<void> {
     try {
         logger.info(`Starting data upload from file: ${filename} for config: ${configId}`);
@@ -90,8 +92,11 @@ export async function uploadDataFromFile({
         if (!payload.dataValues || !Array.isArray(payload.dataValues)) {
             throw new Error(`Invalid data file format: missing or invalid dataValues array in ${filename}`);
         }
-
-        await uploadDataValues(payload);
+        if (isDelete) {
+            await deleteDataValues(payload);
+        } else {
+            await uploadDataValues(payload);
+        }
 
         // Clean up the file after successful upload
         await cleanupDataFile(filename);
@@ -115,21 +120,27 @@ export async function uploadDataFromFile({
     }
 }
 
-export async function uploadDataFromPayload({
+export async function dataFromPayload({
     payload,
     configId,
     filename,
+    isDelete
 }: {
     payload: any;
     configId: string;
     filename?: string;
+    isDelete?: boolean;
 }): Promise<void> {
     try {
 
         if (!payload || !payload.dataValues || !Array.isArray(payload.dataValues)) {
             throw new Error(`Invalid payload format: missing or invalid dataValues array`);
         }
-        await uploadDataValues(payload);
+        if (isDelete) {
+            await deleteDataValues(payload);
+        } else {
+            await uploadDataValues(payload);
+        }
 
         // Clean up the file if it exists and upload was successful
         if (filename) {
@@ -137,13 +148,13 @@ export async function uploadDataFromPayload({
         }
 
     } catch (error: any) {
-        logger.error(`Error uploading data from payload:`, {
+        logger.error(`Error from payload:`, {
             error: {
                 message: error.message,
                 stack: error.stack,
                 name: error.name,
             },
-            configId 
+            configId
         });
 
         // Handle specific error cases
@@ -181,6 +192,32 @@ async function uploadDataValues(payload: any): Promise<{ imported: number; ignor
     return { imported, ignored };
 }
 
+async function deleteDataValues(payload: any): Promise<{ imported: number; ignored: number }> {
+    const url = `dataValueSets`;
+    const params = {
+        importStrategy: "DELETE",
+        async: false,
+    };
+
+    const response = await dhis2Client.post(url, payload, { params });
+    const importSummary = response.data?.response;
+
+    if (!importSummary || !importSummary.importCount) {
+        throw new Error("Invalid response from DHIS2 data delete");
+    }
+
+    const imported = importSummary.importCount.imported || 0;
+    const ignored = importSummary.importCount.ignored || 0;
+
+    logger.info(`Delete summary: ${imported} imported, ${ignored} ignored`);
+
+    if (ignored > 0) {
+        logger.warn(`${ignored} data values were ignored during delete`);
+    }
+
+    return { imported, ignored };
+}
+
 
 
 async function cleanupDataFile(filename: string): Promise<void> {
@@ -198,7 +235,7 @@ async function handleUploadAxiosError(error: AxiosError, filename: string): Prom
     const response = error.response;
 
     if (response?.status === 409) {
-        logger.warn(`Conflicts detected during upload of ${filename}`, {
+        logger.warn(`Conflicts detected of ${filename}`, {
             status: response.status,
             statusText: response.statusText
         });
@@ -209,7 +246,7 @@ async function handleUploadAxiosError(error: AxiosError, filename: string): Prom
             const imported = importSummary.importCount?.imported || 0;
             const ignored = importSummary.importCount?.ignored || 0;
 
-            logger.info(`Conflict upload summary: ${imported} imported, ${ignored} ignored`);
+            logger.info(`Conflict summary: ${imported} imported, ${ignored} ignored`);
         }
 
         // Clean up file even on conflicts
@@ -218,7 +255,7 @@ async function handleUploadAxiosError(error: AxiosError, filename: string): Prom
         return;
     }
 
-    logger.error(`HTTP error during upload of ${filename}`, {
+    logger.error(`HTTP error of ${filename}`, {
         status: response?.status,
         statusText: response?.statusText,
         data: response?.data,

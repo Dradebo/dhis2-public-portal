@@ -3,10 +3,11 @@ import { uploadMetadataFile } from "@/clients/dhis2";
 import { ProcessedMetadata } from "./metadata-download";
 import { processConfigurationFromQueue } from "./utils/configuration-import";
 import * as fs from "node:fs";
+import { generateAndSaveDataItemMappings } from "@/utils/data-item-mapping";
 
 export async function uploadMetadataFromQueue(jobData: any): Promise<void> {
   try {
-    const { metadata, configId, type, totalItems = 0 } = jobData;
+    const { metadata, configId, type} = jobData;
 
     if (!configId) {
       throw new Error(`No configId provided in job data. Job data keys: ${Object.keys(jobData || {}).join(', ')}`);
@@ -29,7 +30,9 @@ export async function uploadMetadataFromQueue(jobData: any): Promise<void> {
       throw new Error(`Invalid metadata structure for config: ${configId}`);
     }
 
-    await uploadMetadata(metadata, configId, totalItems);
+    await uploadMetadata(metadata, configId);
+
+    // await generateAndSaveDataItemMappings(metadata, configId);
     logger.info(`Metadata upload job completed successfully for config: ${configId}`);
 
   } catch (error: any) {
@@ -46,7 +49,7 @@ export async function uploadMetadataFromQueue(jobData: any): Promise<void> {
 
 
 async function uploadCategoriesMetadata(categories: any, tempDir: string): Promise<void> {
-  const maxItemsPerUpload = 500; 
+  const maxItemsPerUpload = 500;
 
   const totalCategories = categories.categories?.length || 0;
   const totalCategoryOptions = categories.categoryOptions?.length || 0;
@@ -109,8 +112,8 @@ async function uploadCategoriesMetadata(categories: any, tempDir: string): Promi
   }
 }
 
-export async function uploadMetadata(metadata: ProcessedMetadata, configId?: string, totalItems: number = 5): Promise<void> {
-   let tempDir: string | undefined;
+export async function uploadMetadata(metadata: ProcessedMetadata, configId: string): Promise<void> {
+  let tempDir: string | undefined;
 
   try {
     logger.info(`Starting metadata upload${configId ? ` for config ${configId}` : ''}...`);
@@ -168,6 +171,9 @@ export async function uploadMetadata(metadata: ProcessedMetadata, configId?: str
 
     // Upload data items (indicators and data elements)
     await uploadMetadataFile(dataItemsPath);
+
+    // Generate and save data item mappings
+    await generateAndSaveDataItemMappings(metadata, configId!);
 
     // Upload visualizations last (they depend on data items)
     await uploadMetadataFile(visualizationsPath);
@@ -238,3 +244,5 @@ export function validateMetadata(metadata: any): metadata is ProcessedMetadata {
     return false;
   }
 }
+
+

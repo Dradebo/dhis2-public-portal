@@ -9,6 +9,7 @@ import { downloadAndQueueData } from '@/services/data-migration/data-download';
 function parseDataDownloadRequestData(query: any) {
     const data: any = {
         dataItemsConfigIds: [],
+        isDelete: false,
         runtimeConfig: {
             periods: [],
             pageSize: 1000,
@@ -25,6 +26,10 @@ function parseDataDownloadRequestData(query: any) {
         if (query.runtimeConfig) {
             const decoded = decodeURIComponent(query.runtimeConfig);
             data.runtimeConfig = { ...data.runtimeConfig, ...JSON.parse(decoded) };
+        }
+        if (query.isDelete) {
+            const decoded = decodeURIComponent(query.isDelete);
+            data.isDelete = JSON.parse(decoded);
         }
     } catch (parseError) {
         logger.warn('Failed to parse JSON from query parameters:', parseError);
@@ -50,6 +55,7 @@ export const GET: Operation = async (
             mainConfigId: configId,
             dataItemsConfigIds: parsedBody.dataItemsConfigIds,
             runtimeConfig: parsedBody.runtimeConfig,
+            isDelete: parsedBody.isDelete,
         });
 
         logger.info(`Data download jobs successfully queued for config: ${configId}`);
@@ -98,6 +104,7 @@ export const POST: Operation = async (
             mainConfigId: configId,
             dataItemsConfigIds: parsedBody.dataItemsConfigIds,
             runtimeConfig: parsedBody.runtimeConfig,
+            isDelete: parsedBody.isDelete,
         });
 
         logger.info(`Data download jobs successfully queued for config: ${configId}`);
