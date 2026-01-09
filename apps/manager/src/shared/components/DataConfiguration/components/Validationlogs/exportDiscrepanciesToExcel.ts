@@ -4,14 +4,14 @@ import { ValidationDiscrepancy } from './interfaces/interfaces';
 
 
 
-const SEVERITY_COLORS = {
-    critical: {
-        fill: 'FFFEF2F2',
-        font: 'FFB91C1C'
+const COMPARISON_COLORS = {
+    destinationGreater: {
+        fill: 'FFFEF2F2',  // Red background
+        font: 'FFB91C1C'   // Red text
     },
-    minor: {
-        fill: 'FFFEFCE8',
-        font: 'FFA16207'
+    sourceGreater: {
+        fill: 'FFFEF3C7',  // Yellow background
+        font: 'FFDC2626'   // Orange-red text
     }
 };
 
@@ -168,7 +168,13 @@ export async function exportDiscrepanciesToExcel(discrepancies: ValidationDiscre
             const discrepancy = discrepancyMap.get(key);
 
             if (discrepancy && (discrepancy.discrepancyType === 'value_mismatch' || discrepancy.discrepancyType === 'missing_in_destination')) {
-                const colors = SEVERITY_COLORS[discrepancy.severity];
+                const sourceValue = parseFloat(String(discrepancy.sourceValue ?? '0')) || 0;
+                const destValue = parseFloat(String(discrepancy.destinationValue ?? '0')) || 0;
+                
+                const colors = destValue > sourceValue 
+                    ? COMPARISON_COLORS.destinationGreater 
+                    : COMPARISON_COLORS.sourceGreater;
+                
                 destCell.fill = {
                     type: 'pattern',
                     pattern: 'solid',
@@ -188,7 +194,7 @@ export async function exportDiscrepanciesToExcel(discrepancies: ValidationDiscre
     }
 
     const legendSheet = workbook.addWorksheet('Legend');
-    legendSheet.addRow(['Severity', 'Description', 'Color']);
+    legendSheet.addRow(['Color', 'Description', 'Sample']);
 
     const legendHeader = legendSheet.getRow(1);
     legendHeader.eachCell(cell => {
@@ -201,23 +207,23 @@ export async function exportDiscrepanciesToExcel(discrepancies: ValidationDiscre
     });
 
     // Add legend entries
-    const criticalRow = legendSheet.addRow(['Critical', 'When destination data is greater than source data', '']);
-    criticalRow.getCell(3).fill = {
+    const redRow = legendSheet.addRow(['Red', 'When destination data is greater than source data', '']);
+    redRow.getCell(3).fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: SEVERITY_COLORS.critical.fill }
+        fgColor: { argb: COMPARISON_COLORS.destinationGreater.fill }
     };
-    criticalRow.getCell(3).font = { color: { argb: SEVERITY_COLORS.critical.font } };
-    criticalRow.getCell(3).value = 'Sample';
+    redRow.getCell(3).font = { bold: true, color: { argb: COMPARISON_COLORS.destinationGreater.font } };
+    redRow.getCell(3).value = 'Sample';
 
-    const minorRow = legendSheet.addRow(['Minor', 'Small data difference', '']);
-    minorRow.getCell(3).fill = {
+    const yellowRow = legendSheet.addRow(['Yellow', 'When source data is greater than destination data', '']);
+    yellowRow.getCell(3).fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: SEVERITY_COLORS.minor.fill }
+        fgColor: { argb: COMPARISON_COLORS.sourceGreater.fill }
     };
-    minorRow.getCell(3).font = { color: { argb: SEVERITY_COLORS.minor.font } };
-    minorRow.getCell(3).value = 'Sample';
+    yellowRow.getCell(3).font = { bold: true, color: { argb: COMPARISON_COLORS.sourceGreater.font } };
+    yellowRow.getCell(3).value = 'Sample';
 
     legendSheet.getColumn(1).width = 15;
     legendSheet.getColumn(2).width = 40;
