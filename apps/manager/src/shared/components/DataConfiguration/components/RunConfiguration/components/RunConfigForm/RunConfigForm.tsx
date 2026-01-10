@@ -315,16 +315,18 @@ export function RunConfigForm({
 							<>
 								<PeriodSelector minPeriodType={"MONTHLY"} />
 								<ConfigSelector config={config} />
-								<>
-									<RHFNumberField
-										name={"runtimeConfig.pageSize"}
-										label={i18n.t("Page size")}
-									/>
-									<RHFCheckboxField
-										name={"runtimeConfig.paginateByData"}
-										label={i18n.t("Paginate by data")}
-									/>
-								</>
+								{selectedService !== "data-validation" && (
+									<>
+										<RHFNumberField
+											name={"runtimeConfig.pageSize"}
+											label={i18n.t("Page size")}
+										/>
+										<RHFCheckboxField
+											name={"runtimeConfig.paginateByData"}
+											label={i18n.t("Paginate by data")}
+										/>
+									</>
+								)}
 							</>
 						)}
 					</form>
