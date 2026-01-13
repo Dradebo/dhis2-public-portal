@@ -5,7 +5,6 @@ import { connectRabbit, getConnection } from "./connection";
 import { dataFromQueue } from "@/services/data-migration/data-upload";
 import { uploadMetadataFromQueue } from "@/services/metadata-migration/metadata-upload";
 import { downloadAndQueueMetadata } from "@/services/metadata-migration/metadata-download";
-import { deleteData } from "@/services/data-migration/data-delete";
 import { getQueueNames } from "@/variables/queue-names";
 import { DatastoreNamespaces } from "@packages/shared/constants";
 import { dhis2Client } from "@/clients/dhis2";
@@ -74,6 +73,10 @@ export const startWorker = async () => {
     const downloadChannel = await connection.createChannel();
     const uploadChannel = await connection.createChannel();
 
+    const { createWorkerPublishChannel } = await import("./connection");
+    await createWorkerPublishChannel();
+    logger.info("[Worker] Created dedicated worker publish channel");
+
     isConnecting = false;
 
     // Setup reconnection on connection close
@@ -121,7 +124,9 @@ const handleMessage = async (
       `[Worker] <==> Message Processed & Acknowledged for ${queueType}.`,
     );
   } catch (error: any) {
-    let retryCount = parseInt(msg.properties.headers?.["x-retry-count"] || "0");
+    const rawRetryCount = msg.properties.headers?.["x-retry-count"];
+    let retryCount = typeof rawRetryCount === 'number' ? rawRetryCount : parseInt(String(rawRetryCount || "0"), 10);
+    if (isNaN(retryCount)) retryCount = 0;
 
     if (!msg.properties.headers) {
       msg.properties.headers = {};
@@ -149,10 +154,10 @@ const handleMessage = async (
 
       try {
         const messageContent = JSON.parse(msg.content.toString());
-        const configId = messageContent.configId;
+        const configId = messageContent.configId || messageContent.mainConfigId;
 
         if (!configId) {
-          logger.error(`[Worker] No configId found in message content for retry. Cannot determine queue name.`);
+          logger.error(`[Worker] No configId or mainConfigId found in message content for retry. Cannot determine queue name.`);
           channel.nack(msg, false, false); 
           return;
         }
@@ -206,7 +211,7 @@ const setupConsumer = async (downloadChannel: Channel, uploadChannel: Channel) =
     const configIds = await getAllConfigIds();
     logger.info(`[ConsumerSetup] Found ${configIds.length} configurations`);
 
-    const prefetchCount = parseInt(process.env.RABBITMQ_PREFETCH_COUNT || "2");
+    const prefetchCount = parseInt(process.env.RABBITMQ_PREFETCH_COUNT || "20");
     downloadChannel.prefetch(prefetchCount);
     uploadChannel.prefetch(prefetchCount);
 
@@ -240,9 +245,18 @@ const setupConsumer = async (downloadChannel: Channel, uploadChannel: Channel) =
         await channel.assertQueue(queueName, queueOptions);
 
         // Start consuming from the queue
-        await channel.consume(queueName, (msg) => {
+        await channel.consume(queueName, async (msg) => {
           if (msg) {
-            handleMessage(channel, msg, handlerType);
+            try {
+              await handleMessage(channel, msg, handlerType);
+            } catch (unhandledError) {
+              logger.error(`[Worker] Unhandled error in message handler for ${handlerType}:`, unhandledError);
+              try {
+                channel.nack(msg, false, false);
+              } catch (nackError) {
+                logger.error(`[Worker] Failed to nack message:`, nackError);
+              }
+            }
           }
         });
 
@@ -256,6 +270,9 @@ const setupConsumer = async (downloadChannel: Channel, uploadChannel: Channel) =
     logger.info(`[Worker] Setup complete. Waiting for messages...`);
     logger.info(`[Worker] Monitoring ${configIds.length} configurations`);
     logger.info(`[Worker] Registered handlers: ${Object.keys(handlerMap).join(', ')}`);
+    logger.info(`[Worker] Prefetch count per channel: ${prefetchCount}`);
+    logger.info(`[Worker] Download channel handles: dataDownload, metadataDownload`);
+    logger.info(`[Worker] Upload channel handles: dataUpload, dataDeletion, metadataUpload`);
     logger.info("================================================================");
 
   } catch (error) {

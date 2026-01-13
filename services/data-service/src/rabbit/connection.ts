@@ -2,11 +2,24 @@ import logger from "@/logging";
 import amqp from "amqplib";
  
 let channel: amqp.Channel;
+let workerPublishChannel: amqp.Channel | null = null;
 let connection: any;
 
 export function getConnection(): any {
     if (!connection) throw new Error("RabbitMQ connection not initialized");
     return connection;
+}
+
+export async function createWorkerPublishChannel(): Promise<amqp.Channel> {
+    if (!connection) throw new Error("RabbitMQ connection not initialized");
+    workerPublishChannel = await connection.createChannel();
+    logger.info("Created dedicated worker publish channel");
+    if (!workerPublishChannel) throw new Error("Failed to create worker publish channel");
+    return workerPublishChannel;
+}
+
+export function getWorkerPublishChannel(): amqp.Channel | null {
+    return workerPublishChannel;
 }
 
 export async function connectRabbit(maxRetries = 10, delayMs = 5000) {

@@ -74,32 +74,30 @@ async function enqueueDataDownloadTasks(
 ): Promise<void> {
     const configId = mainConfig.id;
     const sourceClient = createDownloadClient({ config: mainConfig });
-    const sanitezedConfigs: DataServiceDataSourceItemsConfig[] = [];
 
     for (const config of dataItemConfigs) {
-        logger.info(`Processing configuration ${config.id} data items, please wait...`);
-        const expandedDataItems = await processDataItems({
-            mappings: config.dataItems,
-            sourceClient,
-            destinationClient: dhis2Client,
-            timeout: runtimeConfig.timeout,
-        });
-        const sanitezedConfig = { ...config, dataItems: expandedDataItems };
-        if (isEmpty(sanitezedConfig.dataItems)) {
-            logger.warn(`Configuration ${config.id} has no data items after dissaggregation. Skipping...`);
-        }
+        let sanitizedConfig: DataServiceDataSourceItemsConfig;
+            logger.info(`Processing configuration ${config.id} data items, please wait...`);
+            const expandedDataItems = await processDataItems({
+                mappings: config.dataItems,
+                sourceClient,
+                destinationClient: dhis2Client,
+                timeout: runtimeConfig.timeout,
+            });
+            sanitizedConfig = { ...config, dataItems: expandedDataItems };
+            
+            if (isEmpty(sanitizedConfig.dataItems)) {
+                logger.warn(`Configuration ${config.id} has no data items after dissaggregation. Skipping...`);
+                continue;
+            }
+            logger.info(`Configuration ${config.id} has ${expandedDataItems.length} data items after dissaggregation.`);
 
-        logger.info(`Configuration ${config.id} has ${expandedDataItems.length} data items after dissaggregation.`);
-        sanitezedConfigs.push(sanitezedConfig);
-    }
-
-    for (const periodId of runtimeConfig.periods) {
-        for (const config of sanitezedConfigs) {
+        for (const periodId of runtimeConfig.periods) {
             const message: DataProcessingJob = {
                 mainConfigId: configId,
                 mainConfig,
                 periodId,
-                config,
+                config: sanitizedConfig,
                 runtimeConfig,
                 isDelete: isDelete || false,
             };
@@ -107,6 +105,8 @@ async function enqueueDataDownloadTasks(
                 queuedAt: new Date().toISOString()
             });
         }
+        
+        logger.info(`Queued ${runtimeConfig.periods.length} download jobs for config ${config.id}`);
     }
 }
 

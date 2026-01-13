@@ -4,6 +4,26 @@ import { displayUploadSummary } from "@/services/summary";
 import { AxiosError } from "axios";
 import * as fs from "node:fs";
 
+const IMMEDIATE_RETRY_COUNT = 1;
+const RETRY_DELAYS = [2000];
+
+function isRetryableError(error: any): boolean {
+    if (!(error instanceof AxiosError)) return false;
+    if (!error.response) {
+        return error.code === 'ECONNABORTED' ||
+            error.code === 'ETIMEDOUT' ||
+            error.code === 'ECONNRESET' ||
+            error.code === 'ENOTFOUND' ||
+            error.message?.includes('timeout') ||
+            error.message?.includes('network');
+    }
+    const status = error.response.status;
+    return status === 502 || status === 503 || status === 504 || status === 408;
+}
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export interface DataUploadJob {
     mainConfigId: string;
     filename?: string;
@@ -80,7 +100,6 @@ export async function dataFromFile({
     isDelete?: boolean;
 }): Promise<void> {
     try {
-        logger.info(`Starting data upload from file: ${filename} for config: ${configId}`);
 
         if (!await fs.promises.access(filename).then(() => true).catch(() => false)) {
             throw new Error(`Data file does not exist: ${filename}`);
@@ -93,8 +112,10 @@ export async function dataFromFile({
             throw new Error(`Invalid data file format: missing or invalid dataValues array in ${filename}`);
         }
         if (isDelete) {
+            logger.info(`Starting data deletion from file: ${filename} for config: ${configId}`);
             await deleteDataValues(payload);
         } else {
+            logger.info(`Starting data upload from file: ${filename} for config: ${configId}`);
             await uploadDataValues(payload);
         }
 
@@ -137,8 +158,10 @@ export async function dataFromPayload({
             throw new Error(`Invalid payload format: missing or invalid dataValues array`);
         }
         if (isDelete) {
+            logger.info(`Starting data deletion from payload for config: ${configId}`);
             await deleteDataValues(payload);
         } else {
+            logger.info(`Starting data upload from payload for config: ${configId}`);
             await uploadDataValues(payload);
         }
 
@@ -173,23 +196,46 @@ async function uploadDataValues(payload: any): Promise<{ imported: number; ignor
         async: false,
     };
 
-    const response = await dhis2Client.post(url, payload, { params });
-    const importSummary = response.data?.response;
+    let lastError: any;
 
-    if (!importSummary || !importSummary.importCount) {
-        throw new Error("Invalid response from DHIS2 data upload");
+    for (let attempt = 0; attempt <= IMMEDIATE_RETRY_COUNT; attempt++) {
+        try {
+            if (attempt > 0) {
+                const delay = RETRY_DELAYS[attempt - 1];
+                logger.info(`Retrying upload after ${delay}ms (attempt ${attempt + 1}/${IMMEDIATE_RETRY_COUNT + 1})...`);
+                await sleep(delay);
+            }
+
+            const response = await dhis2Client.post(url, payload, { params });
+            const importSummary = response.data?.response;
+
+            if (!importSummary || !importSummary.importCount) {
+                throw new Error("Invalid response from DHIS2 data upload");
+            }
+
+            const imported = importSummary.importCount.imported || 0;
+            const ignored = importSummary.importCount.ignored || 0;
+            logger.info(`Upload summary: ${imported} imported, ${ignored} ignored`);
+
+            if (ignored > 0) {
+                logger.warn(`${ignored} data values were ignored during upload`);
+            }
+
+            return { imported, ignored };
+        } catch (error: any) {
+            lastError = error;
+            if (attempt < IMMEDIATE_RETRY_COUNT && isRetryableError(error)) {
+                const errorInfo = error instanceof AxiosError
+                    ? `${error.code || 'UNKNOWN'} - ${error.response?.status || 'no response'}`
+                    : error.message;
+                logger.warn(`Upload failed with retryable error: ${errorInfo}. Will retry...`);
+                continue;
+            }
+            throw error;
+        }
     }
 
-    const imported = importSummary.importCount.imported || 0;
-    const ignored = importSummary.importCount.ignored || 0;
-
-    logger.info(`Upload summary: ${imported} imported, ${ignored} ignored`);
-
-    if (ignored > 0) {
-        logger.warn(`${ignored} data values were ignored during upload`);
-    }
-
-    return { imported, ignored };
+    throw lastError;
 }
 
 async function deleteDataValues(payload: any): Promise<{ imported: number; ignored: number }> {
@@ -199,23 +245,43 @@ async function deleteDataValues(payload: any): Promise<{ imported: number; ignor
         async: false,
     };
 
-    const response = await dhis2Client.post(url, payload, { params });
-    const importSummary = response.data?.response;
+    let lastError: any;
+    for (let attempt = 0; attempt <= IMMEDIATE_RETRY_COUNT; attempt++) {
+        try {
+            if (attempt > 0) {
+                const delay = RETRY_DELAYS[attempt - 1];
+                logger.info(`Retrying delete after ${delay}ms (attempt ${attempt + 1}/${IMMEDIATE_RETRY_COUNT + 1})...`);
+                await sleep(delay);
+            }
+            const response = await dhis2Client.post(url, payload, { params });
+            const importSummary = response.data?.response;
+            if (!importSummary || !importSummary.importCount) {
+                throw new Error("Invalid response from DHIS2 data delete");
+            }
 
-    if (!importSummary || !importSummary.importCount) {
-        throw new Error("Invalid response from DHIS2 data delete");
+            const imported = importSummary.importCount.imported || 0;
+            const ignored = importSummary.importCount.ignored || 0;
+            logger.info(`Delete summary: ${imported} imported, ${ignored} ignored`);
+
+            if (ignored > 0) {
+                logger.warn(`${ignored} data values were ignored during delete`);
+            }
+
+            return { imported, ignored };
+        } catch (error: any) {
+            lastError = error;
+            if (attempt < IMMEDIATE_RETRY_COUNT && isRetryableError(error)) {
+                const errorInfo = error instanceof AxiosError
+                    ? `${error.code || 'UNKNOWN'} - ${error.response?.status || 'no response'}`
+                    : error.message;
+                logger.warn(`Delete failed with retryable error: ${errorInfo}. Will retry...`);
+                continue;
+            }
+            throw error;
+        }
     }
 
-    const imported = importSummary.importCount.imported || 0;
-    const ignored = importSummary.importCount.ignored || 0;
-
-    logger.info(`Delete summary: ${imported} imported, ${ignored} ignored`);
-
-    if (ignored > 0) {
-        logger.warn(`${ignored} data values were ignored during delete`);
-    }
-
-    return { imported, ignored };
+    throw lastError;
 }
 
 

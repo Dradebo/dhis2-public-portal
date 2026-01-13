@@ -1,5 +1,5 @@
 import logger from "@/logging";
-import { getChannel } from "./connection";
+import { getChannel, getWorkerPublishChannel } from "./connection";
 import { getQueueNames, QueueType } from "../variables/queue-names";
 
 export async function pushToQueue(
@@ -8,7 +8,7 @@ export async function pushToQueue(
     jobData: any,
     error?: any
 ) {
-    const currentChannel = getChannel();
+    const currentChannel = getWorkerPublishChannel() || getChannel();
     if (!currentChannel) {
         throw new Error("Channel not initialized");
     }
