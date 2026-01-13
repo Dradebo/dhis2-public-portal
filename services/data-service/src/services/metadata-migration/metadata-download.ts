@@ -25,8 +25,6 @@ import { getMetadataFromDashboards } from "../../utils/dashboard";
 import { DatastoreNamespaces } from "@packages/shared/constants";
 import { dhis2Client } from "@/clients/dhis2";
 import {
-    generateDataItemMappings,
-    saveDataItemMappings,
     DataItemMapping
 } from "../../utils/data-item-mapping";
 

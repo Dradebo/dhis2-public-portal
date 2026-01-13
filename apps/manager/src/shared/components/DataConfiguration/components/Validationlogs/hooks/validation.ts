@@ -204,23 +204,68 @@ export function useValidationStatus(configId: string) {
 }
 
 
+const MAX_URL_LENGTH = 6000;
+const estimateUrlLength = (baseUrl: string, dataElements: string[], periods: string[], orgUnits: string[]): number => {
+	const dxParam = `dimension=dx:${dataElements.join(';')}`;
+	const peParam = `dimension=pe:${periods.join(';')}`;
+	const ouParam = `dimension=ou:${orgUnits.join(';')}`;
+	const extraParams = 'hierarchyMeta=true&includeMetadataDetails=true';
+	return baseUrl.length + dxParam.length + peParam.length + ouParam.length + extraParams.length + 10; // +10 for '?' and '&'
+};
+
+const splitByUrlLength = (baseUrl: string, dataElements: string[], periods: string[], orgUnits: string[]): string[][] => {
+	const batches: string[][] = [];
+	let currentBatch: string[] = [];
+	
+	for (const de of dataElements) {
+		const testBatch = [...currentBatch, de];
+		const estimatedLength = estimateUrlLength(baseUrl, testBatch, periods, orgUnits);
+		if (estimatedLength > MAX_URL_LENGTH && currentBatch.length > 0) {
+			batches.push(currentBatch);
+			currentBatch = [de];
+		} else {
+			currentBatch.push(de);
+		}
+	}
+	
+	if (currentBatch.length > 0) {
+		batches.push(currentBatch);
+	}
+	
+	return batches;
+};
+
 const fetchDataFromSource = async (engine: any, sourceConfig: DataServiceConfig, dataElements: string[], periods: string[], orgUnits: string[], pageSize?: number) => {
 	try {
-		if (pageSize && dataElements.length > pageSize) {
-			let allData: any[] = [];
-			const batchCount = Math.ceil(dataElements.length / pageSize);
-
-			for (let i = 0; i < batchCount; i++) {
-				const start = i * pageSize;
-				const end = Math.min((i + 1) * pageSize, dataElements.length);
-				const batchElements = dataElements.slice(start, end);
-				const batchData = await fetchDataFromSourceBatch(engine, sourceConfig, batchElements, periods, orgUnits);
-				allData = allData.concat(batchData);
+		// Step 1: Group data elements by categoryOptionCombo
+		const groupedByCombo = new Map<string, string[]>();
+		
+		dataElements.forEach(de => {
+			const combo = de.includes('.') ? de.split('.')[1] : 'default';
+			if (!groupedByCombo.has(combo)) {
+				groupedByCombo.set(combo, []);
 			}
-			return allData;
+			groupedByCombo.get(combo)!.push(de);
+		});
+
+		// Step 2: Split each COC group by URL length limit only if necessary
+		const baseUrl = `routes/${sourceConfig.source.routeId}/run/analytics/dataValueSet.json`;
+		const allBatches: string[][] = [];
+		
+		for (const elements of groupedByCombo.values()) {
+			const urlBatches = splitByUrlLength(baseUrl, elements, periods, orgUnits);
+			allBatches.push(...urlBatches);
 		}
 
-		return await fetchDataFromSourceBatch(engine, sourceConfig, dataElements, periods, orgUnits);
+		// Step 3: Fetch all batches in parallel
+		const batchPromises = allBatches.map(elements =>
+			fetchDataFromSourceBatch(engine, sourceConfig, elements, periods, orgUnits)
+		);
+		
+		const batchResults = await Promise.all(batchPromises);
+		const allData = batchResults.flat();
+		
+		return allData;
 	} catch (error) {
 		console.error('Error fetching source data:', error);
 		throw error;
@@ -296,21 +341,35 @@ const fetchDataFromSourceBatch = async (engine: any, sourceConfig: DataServiceCo
 
 const fetchDataFromDestination = async (engine: any, destinationConfig: DataServiceConfig, dataElements: string[], periods: string[], orgUnits: string[], pageSize?: number) => {
 	try {
-		if (pageSize && dataElements.length > pageSize) {
-			let allData: any[] = [];
-			const batchCount = Math.ceil(dataElements.length / pageSize);
-
-			for (let i = 0; i < batchCount; i++) {
-				const start = i * pageSize;
-				const end = Math.min((i + 1) * pageSize, dataElements.length);
-				const batchElements = dataElements.slice(start, end);
-				const batchData = await fetchDataFromDestinationBatch(engine, destinationConfig, batchElements, periods, orgUnits);
-				allData = allData.concat(batchData);
+		// Step 1: Group data elements by categoryOptionCombo
+		const groupedByCombo = new Map<string, string[]>();
+		
+		dataElements.forEach(de => {
+			const combo = de.includes('.') ? de.split('.')[1] : 'default';
+			if (!groupedByCombo.has(combo)) {
+				groupedByCombo.set(combo, []);
 			}
-			return allData;
+			groupedByCombo.get(combo)!.push(de);
+		});
+
+		// Step 2: Split each COC group by URL length limit only if necessary
+		const baseUrl = `analytics/dataValueSet.json`;
+		const allBatches: string[][] = [];
+		
+		for (const elements of groupedByCombo.values()) {
+			const urlBatches = splitByUrlLength(baseUrl, elements, periods, orgUnits);
+			allBatches.push(...urlBatches);
 		}
 
-		return await fetchDataFromDestinationBatch(engine, destinationConfig, dataElements, periods, orgUnits);
+		// Step 3: Fetch all batches in parallel
+		const batchPromises = allBatches.map(elements =>
+			fetchDataFromDestinationBatch(engine, destinationConfig, elements, periods, orgUnits)
+		);
+		
+		const batchResults = await Promise.all(batchPromises);
+		const allData = batchResults.flat();
+		
+		return allData;
 	} catch (error) {
 		console.error('Error fetching destination data:', error);
 		return [];
@@ -448,13 +507,18 @@ const performValidation = async (
 		addLogEntry(configId, 'info', `Organization units: ${orgUnits.join(', ')}`);
 		addLogEntry(configId, 'info', `Data elements: ${dataElements.slice(0, 5).join(', ')}${dataElements.length > 5 ? ` and ${dataElements.length - 5} more` : ''}`);
 
-		const paginateByData = fullParams.runtimeConfig?.paginateByData || false;
-		const pageSize = fullParams.runtimeConfig?.pageSize || 30;
-
-		let dataElementsToProcess = dataElements;
-		if (paginateByData && dataElements.length > pageSize) {
-			addLogEntry(configId, 'info', `Pagination by data enabled. Will process ${dataElements.length} data elements in batches of ${pageSize}`);
-		}
+		// Group data elements by categoryOptionCombo for efficient batching
+		const groupedByCombo = new Map<string, string[]>();
+		dataElements.forEach(de => {
+			const combo = de.includes('.') ? de.split('.')[1] : 'default';
+			if (!groupedByCombo.has(combo)) {
+				groupedByCombo.set(combo, []);
+			}
+			groupedByCombo.get(combo)!.push(de);
+		});
+		
+		addLogEntry(configId, 'info', `Data elements grouped into ${groupedByCombo.size} batches by categoryOptionCombo`);
+		
 		const categoryOptionComboIds = [...new Set(
 			dataElements
 				.filter(de => de.includes('.'))
@@ -535,8 +599,7 @@ const performValidation = async (
 			sourceConfig,
 			dataElements,
 			periods,
-			orgUnits,
-			paginateByData ? pageSize : undefined
+			orgUnits
 		);
 		updatePhase(configId, 'fetching-source', 45, `Source data fetched: ${sourceData.length} values`);
 		const skipDestination = fullParams.skipDestination || false;
@@ -553,8 +616,7 @@ const performValidation = async (
 				sourceConfig,
 				dataElements,
 				periods,
-				orgUnits,
-				paginateByData ? pageSize : undefined
+				orgUnits
 			);
 			updatePhase(configId, 'fetching-destination', 75, `Destination data fetched: ${destinationData.length} values`);
 		}

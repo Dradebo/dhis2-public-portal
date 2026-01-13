@@ -11,7 +11,7 @@ import { AxiosError } from "axios";
 import { chunk, compact, head, isEmpty } from "lodash";
 import { pushToQueue } from "@/rabbit/publisher";
 import { checkOrCreateFolder } from "@/utils/files";
-import { fetchPagedData, processAttributeComboData, processData, saveDataFile } from "@/utils/data";
+import { fetchPagedData, processAttributeComboData, processData, processDataItems, saveDataFile } from "@/utils/data";
 import pLimit from "p-limit";
 import { getDimensions } from "@/utils/dimensions";
 
@@ -73,9 +73,28 @@ async function enqueueDataDownloadTasks(
     isDelete?: boolean
 ): Promise<void> {
     const configId = mainConfig.id;
+    const sourceClient = createDownloadClient({ config: mainConfig });
+    const sanitezedConfigs: DataServiceDataSourceItemsConfig[] = [];
+
+    for (const config of dataItemConfigs) {
+        logger.info(`Processing configuration ${config.id} data items, please wait...`);
+        const expandedDataItems = await processDataItems({
+            mappings: config.dataItems,
+            sourceClient,
+            destinationClient: dhis2Client,
+            timeout: runtimeConfig.timeout,
+        });
+        const sanitezedConfig = { ...config, dataItems: expandedDataItems };
+        if (isEmpty(sanitezedConfig.dataItems)) {
+            logger.warn(`Configuration ${config.id} has no data items after dissaggregation. Skipping...`);
+        }
+
+        logger.info(`Configuration ${config.id} has ${expandedDataItems.length} data items after dissaggregation.`);
+        sanitezedConfigs.push(sanitezedConfig);
+    }
 
     for (const periodId of runtimeConfig.periods) {
-        for (const config of dataItemConfigs) {
+        for (const config of sanitezedConfigs) {
             const message: DataProcessingJob = {
                 mainConfigId: configId,
                 mainConfig,
