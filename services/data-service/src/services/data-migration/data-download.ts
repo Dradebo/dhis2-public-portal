@@ -178,7 +178,7 @@ async function handlePagination(jobData: any): Promise<boolean> {
 
     const pageSize = runtimeConfig.pageSize ?? 50;
 
-    if (overrideDimensions && baseDimensions[heavyDimension].length <= pageSize) {
+    if (overrideDimensions || baseDimensions[heavyDimension].length <= pageSize) {
         return false;
     }
 
