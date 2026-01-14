@@ -13,7 +13,8 @@ import { downloadData } from "@/services/data-migration/data-download";
 
 let isConnecting = false;
 const RECONNECT_DELAY = 5000;
-const MAX_RETRIES = 1;
+const MAX_RETRIES = 2;
+const retryCounts = new Map<string, number>();
 
 // Handler map for different queue types
 const handlerMap: Record<string, (messageContent: any) => Promise<void>> = {
@@ -100,110 +101,6 @@ export const startWorker = async () => {
   }
 };
 
-const handleMessage = async (
-  channel: Channel,
-  msg: ConsumeMessage,
-  queueType: string
-) => {
-  const handler = handlerMap[queueType];
-
-  if (!handler) {
-    logger.warn(
-      `[Worker] No handler for queue type: ${queueType}. Discarding.`,
-    );
-    channel.ack(msg);
-    return;
-  }
-
-  try {
-    const messageContent = JSON.parse(msg.content.toString());
-    await handler(messageContent);
-
-    channel.ack(msg);
-    logger.info(
-      `[Worker] <==> Message Processed & Acknowledged for ${queueType}.`,
-    );
-  } catch (error: any) {
-    const rawRetryCount = msg.properties.headers?.["x-retry-count"];
-    let retryCount = typeof rawRetryCount === 'number' ? rawRetryCount : parseInt(String(rawRetryCount || "0"), 10);
-    if (isNaN(retryCount)) retryCount = 0;
-
-    if (!msg.properties.headers) {
-      msg.properties.headers = {};
-    }
-
-    // Enhanced failure reason - handle axios errors specially
-    const failureReason = axios.isAxiosError(error) && error.response
-      ? error.response.data
-      : { message: error.message };
-
-    msg.properties.headers['x-failure-reason'] = JSON.stringify(failureReason);
-    msg.properties.headers['x-error-message'] = error.message;
-    msg.properties.headers['x-error-name'] = error.name;
-    msg.properties.headers['x-error-timestamp'] = new Date().toISOString();
-    msg.properties.headers['x-queue-type'] = queueType;
-
-    if (axios.isAxiosError(error)) {
-      msg.properties.headers['x-axios-status'] = error.response?.status?.toString() || 'unknown';
-      msg.properties.headers['x-axios-code'] = error.code || 'unknown';
-      msg.properties.headers['x-axios-url'] = error.config?.url || 'unknown';
-    }
-
-    if (retryCount < MAX_RETRIES) {
-      logger.warn(`[Worker] Retrying message (attempt ${retryCount + 1}/${MAX_RETRIES}). Requeuing...`);
-
-      try {
-        const messageContent = JSON.parse(msg.content.toString());
-        const configId = messageContent.configId || messageContent.mainConfigId;
-
-        if (!configId) {
-          logger.error(`[Worker] No configId or mainConfigId found in message content for retry. Cannot determine queue name.`);
-          channel.nack(msg, false, false); 
-          return;
-        }
-
-        const queueNames = getQueueNames(configId);
-        const actualQueueName = queueNames[queueType as keyof typeof queueNames];
-
-        if (!actualQueueName) {
-          logger.error(`[Worker] No queue name found for type: ${queueType} and config: ${configId}`);
-          channel.nack(msg, false, false); 
-          return;
-        }
-
-        const updatedHeaders = {
-          ...msg.properties.headers,
-          'x-retry-count': retryCount + 1,
-          'x-retry-timestamp': new Date().toISOString(),
-        };
-
-        await channel.sendToQueue(actualQueueName, msg.content, {
-          ...msg.properties,
-          headers: updatedHeaders,
-        });
-
-        channel.ack(msg);
-      } catch (republishError) {
-        logger.error(`[Worker] Failed to republish message:`, republishError);
-        channel.nack(msg, false, false);
-      }
-    } else {
-      logger.error(
-        `[Worker] Max retries (${MAX_RETRIES}) reached. Sending message to DLQ.`,
-        {
-          errorDetails: {
-            message: error.message,
-            stack: error.stack,
-            name: error.name,
-          }
-        }
-      );
-
-      // false = don't requeue, send to DLQ
-      channel.nack(msg, false, false);
-    }
-  }
-};
 
 const setupConsumer = async (downloadChannel: Channel, uploadChannel: Channel) => {
   try {
@@ -219,15 +116,15 @@ const setupConsumer = async (downloadChannel: Channel, uploadChannel: Channel) =
     for (const configId of configIds) {
       const queueNames = getQueueNames(configId);
 
-      // Create DLQ first
       await downloadChannel.assertQueue(queueNames.failed, { durable: true });
+      await uploadChannel.assertQueue(queueNames.failed, { durable: true });
 
       // Queue configuration with DLQ
       const queueOptions = {
         durable: true,
         arguments: {
-          'x-dead-letter-exchange': '',
-          'x-dead-letter-routing-key': queueNames.failed
+          "x-dead-letter-exchange": "",
+          "x-dead-letter-routing-key": queueNames.failed,
         }
       };
 
@@ -247,15 +144,73 @@ const setupConsumer = async (downloadChannel: Channel, uploadChannel: Channel) =
         // Start consuming from the queue
         await channel.consume(queueName, async (msg) => {
           if (msg) {
+            const messageContent = JSON.parse(msg.content.toString());
+            const jobId = `${messageContent.mainConfigId ?? messageContent.configId}-${messageContent.config.id ?? messageContent.filename ?? 'metadata'}-${messageContent.periodId ?? handlerType}`;
+            const currentRetries = retryCounts.get(jobId) || 0;
+            const queueType = handlerType
             try {
-              await handleMessage(channel, msg, handlerType);
-            } catch (unhandledError) {
-              logger.error(`[Worker] Unhandled error in message handler for ${handlerType}:`, unhandledError);
-              try {
-                channel.nack(msg, false, false);
-              } catch (nackError) {
-                logger.error(`[Worker] Failed to nack message:`, nackError);
+              const handler = handlerMap[queueType];
+
+              if (!handler) {
+                logger.warn(
+                  `[Worker] No handler for queue type: ${queueType}. Discarding.`,
+                );
+                channel.ack(msg);
+                retryCounts.delete(jobId);
+                return;
               }
+
+              await handler(messageContent);
+
+              channel.ack(msg);
+              retryCounts.delete(jobId);
+
+              logger.info(
+                `[Worker] <==> Message Processed & Acknowledged for ${queueType}.`,
+              );
+
+            } catch (error: any) {
+
+              const rawRetryCount = msg.properties.headers?.["x-retry-count"];
+              let retryCount = typeof rawRetryCount === 'number' ? rawRetryCount : parseInt(String(rawRetryCount || "0"), 10);
+              if (isNaN(retryCount)) retryCount = 0;
+
+              if (!msg.properties.headers) {
+                msg.properties.headers = {};
+              }
+
+              // Enhanced failure reason - handle axios errors specially
+              const failureReason = axios.isAxiosError(error) && error.response
+                ? error.response.data
+                : { message: error.message };
+
+              msg.properties.headers['x-failure-reason'] = JSON.stringify(failureReason);
+              msg.properties.headers['x-error-message'] = error.message;
+              msg.properties.headers['x-error-name'] = error.name;
+              msg.properties.headers['x-error-timestamp'] = new Date().toISOString();
+              msg.properties.headers['x-queue-type'] = queueType;
+
+              if (axios.isAxiosError(error)) {
+                msg.properties.headers['x-axios-status'] = error.response?.status?.toString() || 'unknown';
+                msg.properties.headers['x-axios-code'] = error.code || 'unknown';
+                msg.properties.headers['x-axios-url'] = error.config?.url || 'unknown';
+              }
+
+
+              try {
+                if (currentRetries < MAX_RETRIES) {
+                  retryCounts.set(jobId, currentRetries + 1);
+                  logger.warn(`Retrying job ${jobId}, attempt ${currentRetries + 1}`);
+                  channel.nack(msg, false, true);
+                } else {
+                  logger.error(`Job ${jobId} reached max retries, discarding`);
+                  retryCounts.delete(jobId);
+                  channel.nack(msg, false, false);
+                }
+              } catch (ackErr: any) {
+                logger.error(`Failed to nack message for ${configId}: ${ackErr.message || ackErr}`);
+              }
+
             }
           }
         });
@@ -280,6 +235,7 @@ const setupConsumer = async (downloadChannel: Channel, uploadChannel: Channel) =
       "[ConsumerSetup] A critical error occurred during setup:",
       error,
     );
+    throw error;
   }
 };
 

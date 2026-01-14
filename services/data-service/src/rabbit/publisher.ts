@@ -8,7 +8,7 @@ export async function pushToQueue(
     jobData: any,
     error?: any
 ) {
-    const currentChannel = getWorkerPublishChannel() || getChannel();
+    const currentChannel = getChannel();
     if (!currentChannel) {
         throw new Error("Channel not initialized");
     }
@@ -21,18 +21,19 @@ export async function pushToQueue(
         configId,
         queueType,
         timestamp: new Date().toISOString(),
-        ...(error && queueType === 'failed' && {
-            error: {
-                message: error.message,
-                stack: error.stack,
-                name: error.name
-            }
-        })
+        //TODO: Refactor error handling
+        // ...(error && queueType === 'failed' && {
+        //     error: {
+        //         message: error.message,
+        //         stack: error.stack,
+        //         name: error.name
+        //     }
+        // })
     };
 
     const messageBuffer = Buffer.from(JSON.stringify(messageData));
 
-    await currentChannel.sendToQueue(queueName, messageBuffer, {
+    currentChannel.sendToQueue(queueName, messageBuffer, {
         persistent: true,
     });
 

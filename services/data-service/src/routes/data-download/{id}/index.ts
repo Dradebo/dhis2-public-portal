@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import logger from '@/logging';
 import { Operation } from 'express-openapi';
- import { dataDownloadBodySchema } from '@packages/shared/schemas';
+import { dataDownloadBodySchema } from '@packages/shared/schemas';
 import { AxiosError } from 'axios';
 import { fromError } from 'zod-validation-error';
 import { downloadAndQueueData } from '@/services/data-migration/data-download';
