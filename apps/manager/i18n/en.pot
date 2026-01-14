@@ -5,8 +5,8 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"POT-Creation-Date: 2026-01-14T11:13:09.841Z\n"
-"PO-Revision-Date: 2026-01-14T11:13:09.842Z\n"
+"POT-Creation-Date: 2026-01-14T19:07:30.340Z\n"
+"PO-Revision-Date: 2026-01-14T19:07:30.342Z\n"
 
 msgid "Could not get Appearance configurations"
 msgstr "Could not get Appearance configurations"
@@ -698,9 +698,6 @@ msgstr "Sort Items"
 
 msgid "Update..."
 msgstr "Update..."
-
-msgid "Error loading item"
-msgstr "Error loading item"
 
 msgid "Should be a valid svg string"
 msgstr "Should be a valid svg string"
