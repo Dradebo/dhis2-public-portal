@@ -74,14 +74,10 @@ export const startWorker = async () => {
     const downloadChannel = await connection.createChannel();
     const uploadChannel = await connection.createChannel();
 
-    const { createWorkerPublishChannel } = await import("./connection");
-    await createWorkerPublishChannel();
-    logger.info("[Worker] Created dedicated worker publish channel");
-
     isConnecting = false;
 
     // Setup reconnection on connection close
-    connection.once("close", () => {
+    connection.on("close", () => {
       logger.error(
         "[Worker] RabbitMQ connection closed! Attempting to reconnect...",
       );

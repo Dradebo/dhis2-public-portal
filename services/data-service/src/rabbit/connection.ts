@@ -3,9 +3,9 @@ import amqp from "amqplib";
  
 let channel: amqp.Channel;
 let workerPublishChannel: amqp.Channel | null = null;
-let connection: any;
+let connection: amqp.ChannelModel;
 
-export function getConnection(): any {
+export function getConnection(): amqp.ChannelModel {
     if (!connection) throw new Error("RabbitMQ connection not initialized");
     return connection;
 }
