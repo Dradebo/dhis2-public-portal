@@ -22,13 +22,10 @@ export function getWorkerPublishChannel(): amqp.Channel | null {
     return workerPublishChannel;
 }
 
-export async function connectRabbit(maxRetries = 10, delayMs = 5000) {
+export async function connectRabbit( delayMs = 10000) {
     const rabbitUri = process.env.RABBITMQ_URI  || "amqp://localhost";
 
-    let attempt = 0;
-
-    while (attempt < maxRetries) {
-        try {
+      try {
             connection = await amqp.connect(rabbitUri);
             channel = await connection.createChannel();
             logger.info("Connected to RabbitMQ");
@@ -36,7 +33,7 @@ export async function connectRabbit(maxRetries = 10, delayMs = 5000) {
             
             connection.on("close", () => {
                 logger.warn("RabbitMQ connection closed. Reconnecting...");
-                connectRabbit(maxRetries, delayMs);
+                connectRabbit(delayMs);
             });
 
             connection.on("error", (err: any) => {
@@ -45,20 +42,9 @@ export async function connectRabbit(maxRetries = 10, delayMs = 5000) {
 
             return channel;
         } catch (err) {
-            attempt++;
-            logger.error(
-                `RabbitMQ connection failed (Attempt ${attempt}/${maxRetries}): ${err}`
-            );
-
-            if (attempt >= maxRetries) {
-                logger.error("Max retries reached. Could not connect to RabbitMQ.");
-                throw err;
-            }
-
             logger.info(`🔄 Retrying in ${delayMs / 1000} seconds...`);
             await new Promise((res) => setTimeout(res, delayMs));
         }
-    }
 }
 
 
