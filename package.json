@@ -15,6 +15,7 @@
 		"dev:manager": "turbo run dev --filter manager",
 		"dev:docs": "turbo run dev --filter docs",
 		"lint": "turbo run lint",
+		"deploy": "turbo run deploy",
 		"format": "prettier --write \"**/*.{ts,tsx,md}\"",
 		"check-types": "turbo run check-types",
 		"update-versions": "node scripts/update-versions.js",

@@ -47,4 +47,4 @@ jobs:
 
       # Deploy to development DHIS2 instance
       - name: Deploy to Development DHIS2 Instance
-        run: pnpm manager deploy --username ${{ env.D2_USERNAME }} ${{env.DHIS2_BASE_URL}}
+        run: pnpm run --filter manager deploy   --username ${{ env.D2_USERNAME }} ${{env.DHIS2_BASE_URL}}
