@@ -141,7 +141,7 @@ const setupConsumer = async (downloadChannel: Channel, uploadChannel: Channel) =
         await channel.consume(queueName, async (msg) => {
           if (msg) {
             const messageContent = JSON.parse(msg.content.toString());
-            const jobId = `${messageContent.mainConfigId ?? messageContent.configId}-${messageContent.config.id ?? messageContent.filename ?? 'metadata'}-${messageContent.periodId ?? handlerType}`;
+            const jobId = `${messageContent.mainConfigId ?? messageContent.configId}-${messageContent.config?.id ?? messageContent.filename ?? 'metadata'}-${messageContent.periodId ?? handlerType}`;
             const currentRetries = retryCounts.get(jobId) || 0;
             const queueType = handlerType
             try {
