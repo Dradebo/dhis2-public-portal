@@ -21,13 +21,21 @@ import { RHFIDField } from "../../Fields/IDField";
 import { FetchError, useDataEngine } from "@dhis2/app-runtime";
 import { DatastoreNamespaces } from "@packages/shared/constants";
 
-export type AddSourceFormValues = z.infer<typeof dataServiceConfigSchema>;
+const dataServiceConfigFormSchema = dataServiceConfigSchema.extend({
+	source: dataServiceConfigSchema.shape.source.extend({
+		url: z.string().url(),
+		pat: z.string().optional(),
+		username: z.string().optional(),
+		password: z.string().optional(),
+	}),
+});
+export type AddSourceFormValues = z.infer<typeof dataServiceConfigFormSchema>;
 
 function useFormValidation() {
 	const engine = useDataEngine();
 	return useMemo(
 		() =>
-			dataServiceConfigSchema
+			dataServiceConfigFormSchema
 				.extend({
 					id: z.string().refine(
 						async (value) => {
@@ -120,7 +128,7 @@ export function AddDataSourceForm({
 	onClose: () => void;
 }) {
 	const addSourceFormSchema = useFormValidation();
-	const form = useForm({
+	const form = useForm<AddSourceFormValues>({
 		resolver: zodResolver(addSourceFormSchema),
 		defaultValues: {
 			itemsConfig: [],
