@@ -107,16 +107,16 @@ export function SectionLayoutEditor({
 		},
 		`config.sections.${number}.layouts`
 	>({
-		name: `${prefix}.layouts`,
+		name: `${prefix}.layouts` as `config.sections.${number}.layouts`,
 	});
 
 	const { onRemoveVisualization } = useManageSectionVisualizations({
 		prefix,
 	});
 
-	const visualizations: VisualizationDisplayItem[] = useWatch({
-		name: `${prefix}.items`,
-	});
+	const visualizations = useWatch({
+		name: `${prefix}.items` as `config.sections.${number}.items`,
+	}) as VisualizationDisplayItem[] | undefined;
 
 	return (
 		<div className="flex flex-col gap-2 w-full" ref={containerRef}>

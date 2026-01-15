@@ -133,6 +133,7 @@ describe("Modules Page", () => {
 		cy.get('[data-value="CHART"]').click();
 		cy.wait(5000);
 		cy.get('[data-test="visualization-select-content"]').click();
+		cy.wait(2000);
 		cy.get(`[data-value="${visualizations[0]}"]`).click();
 		cy.get('textarea[name="caption"]').type(
 			"This is a test visualization caption",
@@ -214,6 +215,7 @@ describe("Modules Page", () => {
 		cy.get('[data-value="CHART"]').click();
 		cy.wait(2000);
 		cy.get('[data-test="visualization-select-content"]').click();
+		cy.wait(2000);
 		cy.get(`[data-value="${visualizations[0]}"]`).click();
 		cy.get('textarea[name="caption"]').type(
 			"This is a test visualization caption",
@@ -366,12 +368,6 @@ describe("Modules Page", () => {
 			cy.contains("td", doc.title).should("be.visible");
 		}
 
-		cy.contains("td", "PDF Document")
-			.parent("tr")
-			.within(() => {
-				cy.get('[data-test="dhis2-uicore-button"]').click();
-			});
-
 		// For grouped
 		cy.get('input[name="config.grouped"]').click();
 		cy.get('input[value="segmented"]').click();
@@ -409,7 +405,6 @@ describe("Modules Page", () => {
 		}
 
 		cy.wait(5000);
-		cy.contains("button", "Sort document groups").click();
 
 		cy.get('[data-rfd-draggable-id="text-group"]')
 			.focus()

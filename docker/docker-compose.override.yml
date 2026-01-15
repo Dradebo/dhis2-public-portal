@@ -1,0 +1,12 @@
+services:
+  data-service-api:
+    image: hisptanzania/dhis2-public-portal-data-service:latest
+    ports:
+      - "3002:3000"
+    env_file:
+      - .env
+  data-service-worker:
+    image: hisptanzania/dhis2-public-portal-data-service:latest
+    env_file:
+      - .env
+    command: [ "bun", "run", "rabbit/worker.mjs" ]
