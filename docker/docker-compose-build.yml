@@ -1,8 +1,8 @@
 services:
   portal:
     build:
-      context: .
-      dockerfile: ./Dockerfile
+      context: ..
+      dockerfile: ../Dockerfile
       args:
         DHIS2_BASE_PAT_TOKEN: ${DHIS2_BASE_PAT_TOKEN}
         DHIS2_BASE_URL: ${DHIS2_BASE_URL}
@@ -11,7 +11,7 @@ services:
     ports:
       - "${PORTAL_PORT:-3000}:3000"
     env_file:
-      - apps/portal/.env
+      - ../apps/portal/.env
 networks:
   default:
     name: portal-network
