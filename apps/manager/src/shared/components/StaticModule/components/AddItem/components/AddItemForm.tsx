@@ -20,7 +20,7 @@ import {
 import { RHFIDField } from "../../../../Fields/IDField";
 import { useCreateItem } from "../hooks/create";
 import { useModule } from "../../../../ModulesPage/providers/ModuleProvider";
-import { useSaveModule } from "../../../hooks/namespace";
+import { useSaveModule } from "@/shared/components/ModulesPage/hooks/save";
 
 export interface AddItemFormProps {
 	hide: boolean;
@@ -37,7 +37,7 @@ export function AddItemForm({
 }: AddItemFormProps) {
 	const { createItem } = useCreateItem();
 	const module = useModule() as StaticModule;
-	const { save } = useSaveModule(module.id);
+	const { save } = useSaveModule();
 	const { show } = useAlert(
 		({ message }) => message,
 		({ type }) => ({ ...type, duration: 3000 }),
@@ -90,6 +90,7 @@ export function AddItemForm({
 							required
 							name="title"
 							label={i18n.t("Title")}
+							dataTest="item-title"
 						/>
 						<RHFIDField label="ID" name="id" dependsOn="title" />
 						{/* <input type="hidden" {...form.register("sortOrder")} /> */}

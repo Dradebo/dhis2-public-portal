@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useParams } from "@tanstack/react-router";
 import { useAlert, useDataMutation } from "@dhis2/app-runtime";
 import i18n from "@dhis2/d2-i18n";
 import { DatastoreNamespaces } from "@packages/shared/constants";
@@ -12,9 +12,11 @@ const mutation: any = {
 	data: ({ data }: { data: AppModule }) => data,
 };
 
-export function useSaveModule(moduleId: string) {
+export function useSaveModule() {
+	const { moduleId } = useParams({
+		strict: false,
+	});
 	const refresh = useRefreshModule();
-	const navigate = useNavigate();
 	const { show } = useAlert(
 		({ message }) => message,
 		({ type }) => ({ ...type, duration: 3000 }),

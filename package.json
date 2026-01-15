@@ -15,6 +15,7 @@
 		"dev:manager": "turbo run dev --filter manager",
 		"dev:docs": "turbo run dev --filter docs",
 		"lint": "turbo run lint",
+		"deploy": "turbo run deploy",
 		"format": "prettier --write \"**/*.{ts,tsx,md}\"",
 		"check-types": "turbo run check-types",
 		"update-versions": "node scripts/update-versions.js",
@@ -31,14 +32,14 @@
 		"@semantic-release/release-notes-generator": "^14.0.3",
 		"prettier": "^3.5.3",
 		"semantic-release": "^24.2.3",
-		"turbo": "^2.6.0",
+		"turbo": "^2.7.4",
 		"typescript": "5.8.3",
 		"vitest": "^3.1.1"
 	},
 	"engines": {
 		"node": ">=20"
 	},
-	"packageManager": "pnpm@10.24.0+sha512.01ff8ae71b4419903b65c60fb2dc9d34cf8bb6e06d03bde112ef38f7a34d6904c424ba66bea5cdcf12890230bf39f9580473140ed9c946fef328b6e5238a345a",
+	"packageManager": "pnpm@10.28.0+sha512.05df71d1421f21399e053fde567cea34d446fa02c76571441bfc1c7956e98e363088982d940465fd34480d4d90a0668bc12362f8aa88000a64e83d0b0e47be48",
 	"workspaces": {
 		"nohoist": [
 			"sharp"
@@ -51,10 +52,10 @@
 	"repository": {
 		"url": "git@github.com:hisptz/dhis2-public-portal.git"
 	},
-	"version": "1.5.2",
+	"version": "1.5.3",
 	"pnpm": {
 		"overrides": {
-			"@types/react": "19.2.7",
+			"@types/react": "19.2.8",
 			"@types/react-dom": "19.2.3"
 		}
 	}

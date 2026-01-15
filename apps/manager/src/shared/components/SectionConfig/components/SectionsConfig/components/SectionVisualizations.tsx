@@ -2,7 +2,8 @@ import React from "react";
 import { SimpleTable } from "@hisptz/dhis2-ui";
 import i18n from "@dhis2/d2-i18n";
 import { DisplayItem, DisplayItemType } from "@packages/shared/schemas";
-import { first } from "lodash";
+import { capitalize, first } from "lodash";
+import { VisualizationNameResolver } from "../../../../VisualizationNameResolver";
 
 export function SectionVisualizations({
 	visualizations,
@@ -11,8 +12,8 @@ export function SectionVisualizations({
 }) {
 	const columns = [
 		{
-			label: i18n.t("ID"),
-			key: "id",
+			label: i18n.t("Name"),
+			key: "name",
 		},
 		{
 			label: i18n.t("Type"),
@@ -41,14 +42,16 @@ export function SectionVisualizations({
 			if (vis.type === DisplayItemType.VISUALIZATION) {
 				return {
 					id: vis.item.id,
-					type: vis.item.type,
+					name: <VisualizationNameResolver id={vis.item.id} />,
+					type: capitalize(vis.item.type),
 					caption: vis.item.caption || "N/A",
 					actions: vis.actions,
 				};
 			} else {
 				return {
 					id: vis.item.id,
-					type: DisplayItemType.HIGHLIGHTED_SINGLE_VALUE,
+					name: <VisualizationNameResolver id={vis.item.id} />,
+					type: capitalize(vis.type),
 					icon:
 						vis.type === DisplayItemType.HIGHLIGHTED_SINGLE_VALUE
 							? (vis.item.icon ?? "")

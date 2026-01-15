@@ -12,17 +12,15 @@ import { useFieldArray, useWatch } from "react-hook-form";
 import { useNavigate, useParams } from "@tanstack/react-router";
 
 import {
-	DisplayItem,
 	DisplayItemType,
 	Section,
 	SectionType,
-	VisualizationItem,
 } from "@packages/shared/schemas";
 
 import { useSectionNamePrefix } from "../../../hooks/route";
 import { EditVisualization } from "../../../../VisualizationModule/components/AddVisualization/componets/EditVisualization";
 import { SectionVisualizations } from "./SectionVisualizations";
-import { AddVisualization } from "../../../../VisualizationModule/components/AddVisualization/AddVisualization";
+import { AddSectionVisualization } from "../../../../VisualizationModule/components/AddVisualization/AddVisualization";
 
 export function SectionItemsConfig() {
 	const { moduleId, sectionIndex } = useParams({
@@ -72,25 +70,6 @@ export function SectionItemsConfig() {
 		),
 	}));
 
-	const onAddVisualization = (visualization: VisualizationItem) => {
-		const displayItem: DisplayItem =
-			sectionType === SectionType.GRID_LAYOUT
-				? {
-						type: DisplayItemType.HIGHLIGHTED_SINGLE_VALUE,
-						item: {
-							...visualization,
-							icon: visualization.icon ?? "",
-						},
-					}
-				: {
-						type: DisplayItemType.VISUALIZATION,
-						item: {
-							...visualization,
-						},
-					};
-		append(displayItem);
-	};
-
 	return (
 		<div className="flex-1 w-full flex flex-col gap-2">
 			<div className="flex items-center justify-between">
@@ -114,12 +93,11 @@ export function SectionItemsConfig() {
 					)}
 					{sectionType != SectionType.SINGLE_ITEM &&
 						sectionType != SectionType.FLEXIBLE_LAYOUT && (
-							<AddVisualization onAdd={onAddVisualization} />
+							<AddSectionVisualization prefix={namePrefix} />
 						)}
 				</ButtonStrip>
 			</div>
 			<Divider />
-
 			<SectionVisualizations visualizations={rows} />
 		</div>
 	);

@@ -1,11 +1,6 @@
-import React, { useMemo } from "react";
+import React from "react";
 import i18n from "@dhis2/d2-i18n";
-import {
-	Button,
-	ButtonStrip,
-	Divider,
-	IconLayoutColumns24,
-} from "@dhis2/ui";
+import { Button, ButtonStrip, Divider, IconLayoutColumns24 } from "@dhis2/ui";
 import { DashboardVisualizations } from "./components/DashboardVisualizations";
 import { useFieldArray, useWatch } from "react-hook-form";
 import {
@@ -15,36 +10,22 @@ import {
 	VisualizationModule,
 } from "@packages/shared/schemas";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { useVisualizationNames } from "../../hooks/data";
-import { FullLoader } from "../../../FullLoader";
-import ErrorPage from "../../../ErrorPage/ErrorPage";
+import { VisualizationNameResolver } from "../../../VisualizationNameResolver";
+import { capitalize } from "lodash";
 
-export function DashboardVisualizationsConfig() {
+export function ModuleVisualizationsConfig() {
 	const { moduleId } = useParams({
-		from: "/modules/_provider/$moduleId",
+		from: "/modules/_provider/$moduleId/_formProvider/edit/",
 	});
 	const navigate = useNavigate();
 	const hasGroups = useWatch<VisualizationModule, "config.grouped">({
 		name: "config.grouped",
 	});
 
-	const { fields } = useFieldArray<
-		VisualizationModule,
-		"config.items"
-	>({
+	const { fields } = useFieldArray<VisualizationModule, "config.items">({
 		name: "config.items",
 		keyName: "fieldId" as unknown as "id",
 	});
-
-	const visualizationIds = useMemo(
-		() =>
-			fields
-				.filter((field) => field.type === DisplayItemType.VISUALIZATION)
-				.map((field) => (field.item as VisualizationItem).id),
-		[fields],
-	);
-	const { visualizationNames, loading, error } =
-		useVisualizationNames(visualizationIds);
 
 	if (hasGroups) {
 		return null;
@@ -60,24 +41,11 @@ export function DashboardVisualizationsConfig() {
 			const visId = visualizationField.item.id;
 			return {
 				...visualizationField.item,
-				id: visualizationNames.get(visId) || visId,
+				type: capitalize(visualizationField.item.type),
+				id: visId,
+				name: <VisualizationNameResolver id={field.item.id} />,
 			};
 		});
-
-	if (loading) {
-		return (
-			<div>
-				<FullLoader />
-			</div>
-		);
-	}
-	if (error) {
-		return (
-			<div>
-				<ErrorPage error={i18n.t("Error loading visualizations: ")} />
-			</div>
-		);
-	}
 
 	return (
 		<div className="flex-1 w-full flex flex-col gap-2">

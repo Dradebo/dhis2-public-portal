@@ -7,9 +7,9 @@ export function SideMenu() {
 	return (
 		<aside
 			style={{ background: colors.grey200 }}
-			className="h-full w-[240px] min-w-[240px]"
+			className="h-full w-[240px] min-w-[240px] flex flex-col"
 		>
-			<Menu className="h-full">
+			<Menu className="flex-1">
 				{appMenus.map((menu) => (
 					<SideMenuItem
 						label={menu.label}

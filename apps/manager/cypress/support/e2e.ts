@@ -41,6 +41,12 @@ before(() => {
 	const baseUrl = Cypress.env("dhis2BaseUrl");
 	const instanceVersion = Cypress.env("dhis2InstanceVersion");
 
+	console.info({
+		baseUrl,
+		username,
+		dhis2Version: instanceVersion,
+	});
+
 	// @ts-expect-error Injected by DHIS2 commands
 	cy.loginByApi({ username, password, baseUrl });
 

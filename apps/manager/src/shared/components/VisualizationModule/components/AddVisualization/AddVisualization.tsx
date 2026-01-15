@@ -3,14 +3,21 @@ import { AddVisualizationForm } from "./componets/AddVisualizationForm";
 import { Button, IconAdd24 } from "@dhis2/ui";
 import React from "react";
 import i18n from "@dhis2/d2-i18n";
-import { VisualizationItem } from "@packages/shared/schemas";
+import {
+	useManageSectionVisualizations,
+	useManageVisualizations,
+} from "../../hooks/view";
 
-export function AddVisualization({
-	onAdd,
+export function AddSectionVisualization({
+	prefix,
 }: {
-	onAdd: (visualization: VisualizationItem) => void;
+	prefix: `config.sections.${number}`;
 }) {
 	const { value: hide, setTrue: onHide, setFalse: onShow } = useBoolean(true);
+
+	const { onAddVisualization } = useManageSectionVisualizations({
+		prefix,
+	});
 
 	return (
 		<>
@@ -18,7 +25,34 @@ export function AddVisualization({
 				<AddVisualizationForm
 					hide={hide}
 					onClose={onHide}
-					onSubmit={onAdd}
+					onSubmit={onAddVisualization}
+				/>
+			)}
+			<Button onClick={onShow} icon={<IconAdd24 />}>
+				{i18n.t("Add a new visualization")}
+			</Button>
+		</>
+	);
+}
+
+export function AddVisualization({
+	prefix,
+}: {
+	prefix?: `config.groups.${number}`;
+}) {
+	const { value: hide, setTrue: onHide, setFalse: onShow } = useBoolean(true);
+
+	const { onAddVisualization } = useManageVisualizations({
+		prefix,
+	});
+
+	return (
+		<>
+			{!hide && (
+				<AddVisualizationForm
+					hide={hide}
+					onClose={onHide}
+					onSubmit={onAddVisualization}
 				/>
 			)}
 			<Button onClick={onShow} icon={<IconAdd24 />}>

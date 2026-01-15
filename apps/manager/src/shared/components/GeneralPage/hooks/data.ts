@@ -15,7 +15,6 @@ import { useForm, useFormContext } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import i18n from "@dhis2/d2-i18n";
 import { set } from "lodash";
-import { useMetadata } from "../providers/GeneralProvider";
 import { useManageDocument } from "../../../hooks/document";
 
 const query = {
@@ -100,7 +99,6 @@ const dataMutation = {
 };
 
 export function useSaveMetadata() {
-	const config = useMetadata();
 	const engine = useDataEngine();
 	const { refetch } = useDataQuery<Response>(query, {
 		lazy: true,
@@ -131,16 +129,16 @@ export function useSaveMetadata() {
 	const save = async (data: MetadataForm) => {
 		try {
 			const updatedData = {
-				...config,
 				...data,
-				icon: config.icon,
-				icons: config.icons,
 			};
 			if (data.icon.size > 0) {
 				//Means a new file has been uploaded
 				const { icon, icons } = await generateIcons(data);
 				set(updatedData, "icon", icon);
 				set(updatedData, "icons", icons);
+			} else {
+				set(updatedData, "icons", []);
+				set(updatedData, "icon", data.icon.id);
 			}
 			await mutate({ data: updatedData });
 			const defaultValues = await getMetadataFormDefaultValues({
@@ -155,6 +153,10 @@ export function useSaveMetadata() {
 		} catch (e) {
 			//An error has already been printed out in use data mutation callbacks
 			console.error(e);
+			show({
+				message: `${i18n.t("Could not save the changes")}: ${e.message}`,
+				type: { critical: true },
+			});
 		}
 	};
 

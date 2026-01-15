@@ -1,3 +1,23 @@
+## [1.5.3](https://github.com/hisptz/dhis2-public-portal/compare/v1.5.2...v1.5.3) (2026-01-14)
+
+
+### Bug Fixes
+
+* added a preview button, allowing preview of a module on the deployed application ([343edf2](https://github.com/hisptz/dhis2-public-portal/commit/343edf2cf43ecfd580160555c6bf177652a208b9))
+* added version display to footer on the portal ([813f3f2](https://github.com/hisptz/dhis2-public-portal/commit/813f3f2698e7fd6cc582bf4f7e7119e599d930bd))
+* **deps:** fixed issues with deps mismatches ([804d8ab](https://github.com/hisptz/dhis2-public-portal/commit/804d8ab0c71aad317e9226287d35183628527f3e))
+* fixed issues with layout editing infinite reloading the visualizations in some cases ([5a63fe7](https://github.com/hisptz/dhis2-public-portal/commit/5a63fe704eb94eb9b9410877b80bc80c9cc35339))
+* fixed issues with visualizations display on section module configuration ([de408d9](https://github.com/hisptz/dhis2-public-portal/commit/de408d9d96ccae0cc43b157ad291eeb7493747af))
+* **manager:** improved layout of the appearance page ([ce7fbee](https://github.com/hisptz/dhis2-public-portal/commit/ce7fbeea44d634703ed979f1b3da4bbb4d5bf0be))
+* **manager:** upgraded [@dhis2](https://github.com/dhis2) packages to latest versions ([4392248](https://github.com/hisptz/dhis2-public-portal/commit/4392248ae57d9c3e9697b169c976b10bee43b9e7))
+* **manager:** upgraded [@dhis2](https://github.com/dhis2) packages to latest versions ([ec8aaae](https://github.com/hisptz/dhis2-public-portal/commit/ec8aaaec629d07fc6db3738cb8c3fa9b05110623))
+* navigation issues due to sync url to shell and upgraded tanstack router to the latest version ([14bb244](https://github.com/hisptz/dhis2-public-portal/commit/14bb244ae307f3d257cb696e85e07a40b5fb704f))
+* navigation issues due to sync url to shell and upgraded tanstack router to the latest version ([acaf5e9](https://github.com/hisptz/dhis2-public-portal/commit/acaf5e9c119228620dcf5acbf4ff9ff8edf59163))
+* **portal:** added endpoint to get the portal's version ([5d29211](https://github.com/hisptz/dhis2-public-portal/commit/5d292113c4f6151ea2c63c8ba7aafc2377a243fe))
+* **portal:** upgraded to the latest NextJS and React versions ([b1a7a93](https://github.com/hisptz/dhis2-public-portal/commit/b1a7a9352a075948abd81d144068e9e9e4f25a6b))
+* refactored visualization management and fixed layout issues with the dashboard layout editor ([4bd944d](https://github.com/hisptz/dhis2-public-portal/commit/4bd944db226d6077861fa725ef7d5d658bfcc3c9))
+* upgraded [@dhis2](https://github.com/dhis2), NextJS, and React packages to latest stable versions ([db916aa](https://github.com/hisptz/dhis2-public-portal/commit/db916aab64fed260189afab26aa692cbd2fdeaa1))
+
 ## [1.5.2](https://github.com/hisptz/dhis2-public-portal/compare/v1.5.1...v1.5.2) (2025-12-08)
 
 

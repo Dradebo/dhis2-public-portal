@@ -11,16 +11,16 @@ export type AppMetaIcon = z.infer<typeof appIconSchema>;
 export class AppIconFile extends File {
 	id?: string;
 
-	setId(id: string) {
-		this.id = id;
-		return this;
-	}
-
 	static async fromFile(file: File) {
 		return new AppIconFile([await file.arrayBuffer()], file.name, {
 			lastModified: file.lastModified,
 			type: file.type,
 		});
+	}
+
+	setId(id: string) {
+		this.id = id;
+		return this;
 	}
 }
 
@@ -38,7 +38,24 @@ export const metadataFormSchema = z.object({
 	name: z.string(),
 	description: z.string(),
 	icon: z.instanceof(AppIconFile),
-	applicationURL: z.string().url(),
+	applicationURL: z
+		.string()
+		.url()
+		.refine(
+			async (value) => {
+				if (!value) return true;
+				const response = await fetch(`${value}/api/info`);
+				if (!response.ok) {
+					return false;
+				}
+				const details = await response.json();
+				return details.version; //TODO: add version limit checks in the future
+			},
+			{
+				message:
+					"Application URL is not valid. Make sure it points to your running FlexiPortal installation",
+			},
+		),
 });
 
 export type MetadataForm = z.infer<typeof metadataFormSchema>;

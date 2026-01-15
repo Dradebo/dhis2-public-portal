@@ -5,7 +5,7 @@ import {
 	createRouter,
 	RouterProvider,
 } from "@tanstack/react-router";
-import { routeTree } from "./routes.gen";
+import { routeTree } from "./routeTree.gen";
 import { DialogProvider } from "@hisptz/dhis2-ui";
 import "leaflet/dist/leaflet.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

@@ -5,7 +5,7 @@ import {
 } from "@packages/shared/schemas";
 import { FullScreen, useFullScreenHandle } from "react-full-screen";
 import { useAnalytics } from "@packages/shared/hooks";
-import React from "react";
+import React, { useMemo } from "react";
 import { FullLoader } from "../../../../FullLoader";
 import {
 	ChartSelector,
@@ -23,9 +23,10 @@ export function DataVisComponent({
 }) {
 	const { type } = config;
 	const handler = useFullScreenHandle();
+	const defaultParams = useMemo(() => new Map(), []);
 	const { analytics, loading: analyticsLoading } = useAnalytics({
 		visualizationConfig,
-		params: new Map(),
+		params: defaultParams,
 	});
 
 	return (

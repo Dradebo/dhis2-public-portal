@@ -1,15 +1,11 @@
-import React, {
-	DetailedHTMLProps,
-	forwardRef,
-	HTMLAttributes,
-	useRef,
-} from "react";
+import React, { DetailedHTMLProps, forwardRef, HTMLAttributes } from "react";
 import { useController, useWatch } from "react-hook-form";
-import {
-	IconCross24,
-} from "@dhis2/ui";
+import { IconCross24 } from "@dhis2/ui";
 import i18n from "@dhis2/d2-i18n";
-import { Responsive as ResponsiveGridLayout } from "react-grid-layout";
+import {
+	Responsive as ResponsiveGridLayout,
+	useContainerWidth,
+} from "react-grid-layout";
 import {
 	FlexibleLayoutConfig,
 	VisualizationDisplayItem,
@@ -18,14 +14,17 @@ import {
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { MainVisualization } from "./ModulesPage/components/Visualizations/MainVisualization";
+import { fromPairs } from "lodash";
+import {
+	ScreenSizeId,
+	SUPPORTED_SCREEN_SIZES,
+} from "@packages/shared/constants";
+import { useManageSectionVisualizations } from "./VisualizationModule/hooks/view";
 
 function SectionItem({ item }: { item: VisualizationItem }) {
-
 	return (
 		<div className="flex flex-col justify-center items-center h-full w-full gap-2">
-			<MainVisualization
-				config={item}
-			/>
+			<MainVisualization config={item} />
 		</div>
 	);
 }
@@ -75,8 +74,13 @@ const GridItem = forwardRef<
 				onTouchStart={stopPropagationTouch}
 				onClick={handleDeleteClick}
 				className="absolute top-1 right-1 cursor-pointer"
-				style={{ background: "transparent", border: "none", padding: 0 }}
-				title={i18n.t("Remove visualization")}>
+				style={{
+					background: "transparent",
+					border: "none",
+					padding: 0,
+				}}
+				title={i18n.t("Remove visualization")}
+			>
 				<IconCross24 />
 			</button>
 			<SectionItem item={item} />
@@ -88,14 +92,11 @@ const GridItem = forwardRef<
 export function SectionLayoutEditor({
 	prefix,
 	size,
-	onDelete,
 }: {
 	prefix: `config.sections.${number}`;
-	size?: number;
-	onDelete: (id: string) => void;
+	size: ScreenSizeId;
 }) {
-	const ref = useRef<HTMLDivElement>(null);
-
+	const { containerRef, width, mounted } = useContainerWidth();
 	const { field } = useController<
 		{
 			config: {
@@ -109,53 +110,58 @@ export function SectionLayoutEditor({
 		name: `${prefix}.layouts` as `config.sections.${number}.layouts`,
 	});
 
+	const { onRemoveVisualization } = useManageSectionVisualizations({
+		prefix,
+	});
+
 	const visualizations = useWatch({
 		name: `${prefix}.items` as `config.sections.${number}.items`,
 	}) as VisualizationDisplayItem[] | undefined;
 
 	return (
-		<div className="flex flex-col gap-2" ref={ref}>
+		<div className="flex flex-col gap-2 w-full" ref={containerRef}>
 			<div className="flex-1 flex justify-center w-full">
-				<div className="bg-white w-full" style={{ width: size }}>
-					<ResponsiveGridLayout
-					key={visualizations?.map(v => v.item.id).join(",") || "empty"}
-						breakpoints={{
-							lg: 1200,
-							md: 996,
-							sm: 768,
-							xs: 480,
-							xxs: 120,
-						}}
-						cols={{
-							lg: 12,
-							md: 10,
-							sm: 6,
-							xs: 4,
-							xxs: 1,
-						}}
-						layouts={field.value as FlexibleLayoutConfig}
-						margin={[8, 8]}
-						className="layout"
-						allowOverlap={false}
-						rowHeight={80}
-						width={size}
-						autoSize
-						isDraggable
-						isDroppable
-						isResizable
-						compactType={null}
-						onLayoutChange={(updatedLayout, actualValue) => {
-							field.onChange(actualValue);
-						}}
-					>
-						{visualizations?.map((item) => (
-							<GridItem
-								key={item.item?.id}
-								item={item.item as VisualizationItem}
-								onDelete={onDelete}
-							/>
-						))}
-					</ResponsiveGridLayout>
+				<div className="bg-white w-full">
+					{mounted && (
+						<ResponsiveGridLayout
+							breakpoint={size}
+							key={
+								visualizations
+									?.map((v) => v.item.id)
+									.join(",") || "empty"
+							}
+							breakpoints={
+								fromPairs(
+									SUPPORTED_SCREEN_SIZES.map((value) => {
+										return [value.id, value.value];
+									}),
+								) as { [key in ScreenSizeId]: number }
+							}
+							cols={
+								fromPairs(
+									SUPPORTED_SCREEN_SIZES.map((value) => {
+										return [value.id, value.cols];
+									}),
+								) as { [key in ScreenSizeId]: number }
+							}
+							layouts={field.value as FlexibleLayoutConfig}
+							margin={[8, 8]}
+							className="layout"
+							rowHeight={80}
+							width={width}
+							onLayoutChange={(updatedLayout, actualValue) => {
+								field.onChange(actualValue);
+							}}
+						>
+							{visualizations?.map((item) => (
+								<GridItem
+									key={item.item?.id}
+									item={item.item as VisualizationItem}
+									onDelete={onRemoveVisualization}
+								/>
+							))}
+						</ResponsiveGridLayout>
+					)}
 				</div>
 			</div>
 		</div>

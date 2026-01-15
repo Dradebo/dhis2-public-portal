@@ -13,6 +13,7 @@ import NextImage from "next/image";
 import { FooterLinks } from "@/components/Footer/components/FooterLinks";
 import { FooterStaticContent } from "@/components/Footer/components/FooterStaticContent";
 import { getForeground } from "@packages/shared/utils";
+import { VersionDisplay } from "@/components/VersionDisplay";
 
 export function Footer({
 	config,
@@ -130,6 +131,9 @@ export function Footer({
 					{config.copyright}
 				</Text>
 			</Container>
+			<div className="absolute bottom-2 right-2">
+				<VersionDisplay />
+			</div>
 		</div>
 	);
 }

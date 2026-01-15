@@ -26,7 +26,7 @@ type Props = {
 	defaultConfig?: any;
 };
 
-export const ConfigProvider = ({
+export const InitConfigProvider = ({
 	children,
 	dataStoreKey,
 	defaultConfig,

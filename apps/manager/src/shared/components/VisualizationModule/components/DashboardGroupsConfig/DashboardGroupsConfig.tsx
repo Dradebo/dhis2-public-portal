@@ -16,7 +16,7 @@ import { RichContent } from "../../../RichContent";
 
 export function DashboardGroupsConfig() {
 	const { moduleId } = useParams({
-		from: "/modules/_provider/$moduleId",
+		from: "/modules/_provider/$moduleId/_formProvider/edit/",
 	});
 	const navigate = useNavigate();
 	const hasGroups = useWatch<VisualizationModule, "config.grouped">({
