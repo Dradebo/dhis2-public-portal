@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { testDHIS2Route } from "../services/dhis2Routes";
+import { testDHIS2Route } from "@/services/dhis2Routes";
 import { AxiosError } from "axios";
 
 const dhis2routes = Router();

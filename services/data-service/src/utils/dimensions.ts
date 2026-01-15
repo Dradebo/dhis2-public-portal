@@ -1,19 +1,18 @@
-// @ts-ignore
 import {
 	createFixedPeriodFromPeriodId,
 	generateFixedPeriods,
+	periodTypes,
 } from "@dhis2/multi-calendar-dates";
+import "react"; //For the multi-calendar-dates package
 import { DateTime, Interval } from "luxon";
 import {
 	DataServiceDataSourceItemsConfig,
 	DataServiceRuntimeConfig,
-} from "@packages/shared/schemas"; // @ts-ignore
-import {
-	FixedPeriod,
-	PeriodType,
-} from "@dhis2/multi-calendar-dates/build/types/period-calculation/types";
+} from "@packages/shared/schemas";
 import { Dimensions } from "@/schemas/metadata";
 import logger from "@/logging";
+
+type PeriodType = (typeof periodTypes)[number];
 
 export function getDimensions({
 	runtimeConfig,
@@ -25,7 +24,7 @@ export function getDimensions({
 	periodId: string;
 }): Dimensions {
 	try {
-		const periodType = config.periodTypeId;
+		const periodType = config.periodTypeId as PeriodType;
 		const orgUnitLevel =
 			runtimeConfig.overrides?.orgUnitLevelId ?? config.orgUnitLevel;
 		const parentOrgUnit =
@@ -39,11 +38,11 @@ export function getDimensions({
 			DateTime.fromJSDate(new Date(period.endDate)),
 		);
 		const periods = generateFixedPeriods({
-			periodType: periodType as PeriodType,
+			periodType: periodType,
 			year: new Date(period.startDate).getFullYear(),
 			calendar: "iso8601",
 		})
-			.filter((period: FixedPeriod) => {
+			.filter((period) => {
 				const interval = Interval.fromDateTimes(
 					DateTime.fromJSDate(new Date(period.startDate)),
 					DateTime.fromJSDate(new Date(period.endDate)),

@@ -1,23 +1,36 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDataEngine } from "@dhis2/app-runtime";
 import { useNavigate } from "@tanstack/react-router";
-import { DataServiceRunStatus } from "@packages/shared/schemas";
-import { DataServiceConfig } from "@packages/shared/schemas";
-import { ValidationDiscrepanciesResponse, ValidationDiscrepancy, ValidationLogEntry, ValidationLogsResponse, ValidationSession, ValidationSummary } from "../interfaces/interfaces";
-
+import {
+	DataServiceConfig,
+	DataServiceRunStatus,
+} from "@packages/shared/schemas";
+import {
+	ValidationDiscrepanciesResponse,
+	ValidationDiscrepancy,
+	ValidationLogEntry,
+	ValidationLogsResponse,
+	ValidationSession,
+	ValidationSummary,
+} from "../interfaces/interfaces";
 
 export type ValidationPhase =
-	| 'initializing'
-	| 'fetching-metadata'
-	| 'fetching-source'
-	| 'fetching-destination'
-	| 'comparing'
-	| 'completed'
-	| 'failed';
+	| "initializing"
+	| "fetching-metadata"
+	| "fetching-source"
+	| "fetching-destination"
+	| "comparing"
+	| "completed"
+	| "failed";
 
 const validationSessions = new Map<string, ValidationSession>();
 
-const updatePhase = (configId: string, phase: ValidationPhase, progress: number, message?: string) => {
+const updatePhase = (
+	configId: string,
+	phase: ValidationPhase,
+	progress: number,
+	message?: string,
+) => {
 	const session = validationSessions.get(configId);
 	if (session) {
 		session.summary.phase = phase;
@@ -27,7 +40,12 @@ const updatePhase = (configId: string, phase: ValidationPhase, progress: number,
 	}
 };
 
-const addLogEntry = (configId: string, level: ValidationLogEntry['level'], message: string, metadata?: any) => {
+const addLogEntry = (
+	configId: string,
+	level: ValidationLogEntry["level"],
+	message: string,
+	metadata?: any,
+) => {
 	const session = validationSessions.get(configId);
 	if (session) {
 		const logEntry: ValidationLogEntry = {
@@ -35,31 +53,34 @@ const addLogEntry = (configId: string, level: ValidationLogEntry['level'], messa
 			timestamp: new Date().toISOString(),
 			level,
 			message,
-			metadata
+			metadata,
 		};
 		session.logs.push(logEntry);
 		session.summary.lastActivity = new Date().toISOString();
 	}
 };
 
-const addDiscrepancy = (configId: string, discrepancy: Omit<ValidationDiscrepancy, 'id'>) => {
+const addDiscrepancy = (
+	configId: string,
+	discrepancy: Omit<ValidationDiscrepancy, "id">,
+) => {
 	const session = validationSessions.get(configId);
 	if (session) {
 		const fullDiscrepancy: ValidationDiscrepancy = {
 			...discrepancy,
-			id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+			id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 		};
 		session.discrepancies.push(fullDiscrepancy);
 		session.summary.discrepanciesFound++;
 
 		switch (discrepancy.severity) {
-			case 'critical':
+			case "critical":
 				session.summary.criticalDiscrepancies++;
 				break;
-			case 'major':
+			case "major":
 				session.summary.majorDiscrepancies++;
 				break;
-			case 'minor':
+			case "minor":
 				session.summary.minorDiscrepancies++;
 				break;
 		}
@@ -73,24 +94,26 @@ export function useValidationLogs(
 		offset?: number;
 		level?: string;
 		autoRefresh?: boolean;
-	} = {}
+	} = {},
 ) {
 	const { limit = 100, offset = 0, level, autoRefresh = true } = options;
 	const navigate = useNavigate();
 
-	return useQuery({
+	return useQuery<ValidationLogsResponse, Error>({
 		queryKey: ["validation-logs", configId, limit, offset, level],
 		queryFn: async (): Promise<ValidationLogsResponse> => {
 			const session = validationSessions.get(configId);
 			if (!session) {
 				navigate({ to: "/data-service-configuration" });
-				throw new Error('Validation session not found - redirecting to configuration page');
+				throw new Error(
+					"Validation session not found - redirecting to configuration page",
+				);
 			}
 
 			let logs = session.logs;
 
-			if (level && level !== 'all') {
-				logs = logs.filter(log => log.level === level);
+			if (level && level !== "all") {
+				logs = logs.filter((log) => log.level === level);
 			}
 
 			const paginatedLogs = logs.slice(offset, offset + limit);
@@ -104,8 +127,8 @@ export function useValidationLogs(
 					limit,
 					offset,
 					total: logs.length,
-					hasMore: offset + limit < logs.length
-				}
+					hasMore: offset + limit < logs.length,
+				},
 			};
 		},
 		enabled: !!configId,
@@ -124,43 +147,76 @@ export function useValidationDiscrepancies(
 		severity?: string;
 		type?: string;
 		dataElement?: string;
-	} = {}
+	} = {},
 ) {
 	const { limit = 50, offset = 0, severity, type, dataElement } = options;
 	const navigate = useNavigate();
 
-	return useQuery({
-		queryKey: ["validation-discrepancies", configId, limit, offset, severity, type, dataElement],
+	return useQuery<ValidationDiscrepanciesResponse, Error>({
+		queryKey: [
+			"validation-discrepancies",
+			configId,
+			limit,
+			offset,
+			severity,
+			type,
+			dataElement,
+		],
 		queryFn: async (): Promise<ValidationDiscrepanciesResponse> => {
 			const session = validationSessions.get(configId);
 			if (!session) {
 				navigate({ to: "/data-service-configuration" });
-				throw new Error('Validation session not found - redirecting to configuration page');
+				throw new Error(
+					"Validation session not found - redirecting to configuration page",
+				);
 			}
 			let discrepancies = session.discrepancies;
-			if (severity && severity !== 'all') {
-				discrepancies = discrepancies.filter(d => d.severity === severity);
+			if (severity && severity !== "all") {
+				discrepancies = discrepancies.filter(
+					(d) => d.severity === severity,
+				);
 			}
-			if (type && type !== 'all') {
-				discrepancies = discrepancies.filter(d => d.discrepancyType === type);
+			if (type && type !== "all") {
+				discrepancies = discrepancies.filter(
+					(d) => d.discrepancyType === type,
+				);
 			}
 			if (dataElement) {
-				discrepancies = discrepancies.filter(d => d.dataElement === dataElement || d.dataElementName.toLowerCase().includes(dataElement.toLowerCase()));
+				discrepancies = discrepancies.filter(
+					(d) =>
+						d.dataElement === dataElement ||
+						d.dataElementName
+							.toLowerCase()
+							.includes(dataElement.toLowerCase()),
+				);
 			}
-			const paginatedDiscrepancies = discrepancies.slice(offset, offset + limit);
+			const paginatedDiscrepancies = discrepancies.slice(
+				offset,
+				offset + limit,
+			);
 			const summary = {
 				total: discrepancies.length,
-				critical: discrepancies.filter(d => d.severity === 'critical').length,
-				major: discrepancies.filter(d => d.severity === 'major').length,
-				minor: discrepancies.filter(d => d.severity === 'minor').length,
-				byType: discrepancies.reduce((acc, d) => {
-					acc[d.discrepancyType] = (acc[d.discrepancyType] || 0) + 1;
-					return acc;
-				}, {} as Record<string, number>),
-				byDataElement: discrepancies.reduce((acc, d) => {
-					acc[d.dataElement] = (acc[d.dataElement] || 0) + 1;
-					return acc;
-				}, {} as Record<string, number>)
+				critical: discrepancies.filter((d) => d.severity === "critical")
+					.length,
+				major: discrepancies.filter((d) => d.severity === "major")
+					.length,
+				minor: discrepancies.filter((d) => d.severity === "minor")
+					.length,
+				byType: discrepancies.reduce(
+					(acc, d) => {
+						acc[d.discrepancyType] =
+							(acc[d.discrepancyType] || 0) + 1;
+						return acc;
+					},
+					{} as Record<string, number>,
+				),
+				byDataElement: discrepancies.reduce(
+					(acc, d) => {
+						acc[d.dataElement] = (acc[d.dataElement] || 0) + 1;
+						return acc;
+					},
+					{} as Record<string, number>,
+				),
 			};
 			return {
 				success: true,
@@ -171,8 +227,8 @@ export function useValidationDiscrepancies(
 					limit,
 					offset,
 					total: discrepancies.length,
-					hasMore: offset + limit < discrepancies.length
-				}
+					hasMore: offset + limit < discrepancies.length,
+				},
 			};
 		},
 		enabled: !!configId,
@@ -184,13 +240,15 @@ export function useValidationDiscrepancies(
 export function useValidationStatus(configId: string) {
 	const navigate = useNavigate();
 
-	return useQuery({
+	return useQuery<ValidationSummary, Error>({
 		queryKey: ["validation-status", configId],
 		queryFn: async (): Promise<ValidationSummary> => {
 			const session = validationSessions.get(configId);
 			if (!session) {
 				navigate({ to: "/data-service-configuration" });
-				throw new Error('Validation session not found - redirecting to configuration page');
+				throw new Error(
+					"Validation session not found - redirecting to configuration page",
+				);
 			}
 
 			return session.summary;
@@ -203,23 +261,44 @@ export function useValidationStatus(configId: string) {
 	});
 }
 
-
 const MAX_URL_LENGTH = 6000;
-const estimateUrlLength = (baseUrl: string, dataElements: string[], periods: string[], orgUnits: string[]): number => {
-	const dxParam = `dimension=dx:${dataElements.join(';')}`;
-	const peParam = `dimension=pe:${periods.join(';')}`;
-	const ouParam = `dimension=ou:${orgUnits.join(';')}`;
-	const extraParams = 'hierarchyMeta=true&includeMetadataDetails=true';
-	return baseUrl.length + dxParam.length + peParam.length + ouParam.length + extraParams.length + 10; // +10 for '?' and '&'
+const estimateUrlLength = (
+	baseUrl: string,
+	dataElements: string[],
+	periods: string[],
+	orgUnits: string[],
+): number => {
+	const dxParam = `dimension=dx:${dataElements.join(";")}`;
+	const peParam = `dimension=pe:${periods.join(";")}`;
+	const ouParam = `dimension=ou:${orgUnits.join(";")}`;
+	const extraParams = "hierarchyMeta=true&includeMetadataDetails=true";
+	return (
+		baseUrl.length +
+		dxParam.length +
+		peParam.length +
+		ouParam.length +
+		extraParams.length +
+		10
+	); // +10 for '?' and '&'
 };
 
-const splitByUrlLength = (baseUrl: string, dataElements: string[], periods: string[], orgUnits: string[]): string[][] => {
+const splitByUrlLength = (
+	baseUrl: string,
+	dataElements: string[],
+	periods: string[],
+	orgUnits: string[],
+): string[][] => {
 	const batches: string[][] = [];
 	let currentBatch: string[] = [];
-	
+
 	for (const de of dataElements) {
 		const testBatch = [...currentBatch, de];
-		const estimatedLength = estimateUrlLength(baseUrl, testBatch, periods, orgUnits);
+		const estimatedLength = estimateUrlLength(
+			baseUrl,
+			testBatch,
+			periods,
+			orgUnits,
+		);
 		if (estimatedLength > MAX_URL_LENGTH && currentBatch.length > 0) {
 			batches.push(currentBatch);
 			currentBatch = [de];
@@ -227,21 +306,28 @@ const splitByUrlLength = (baseUrl: string, dataElements: string[], periods: stri
 			currentBatch.push(de);
 		}
 	}
-	
+
 	if (currentBatch.length > 0) {
 		batches.push(currentBatch);
 	}
-	
+
 	return batches;
 };
 
-const fetchDataFromSource = async (engine: any, sourceConfig: DataServiceConfig, dataElements: string[], periods: string[], orgUnits: string[], pageSize?: number) => {
+const fetchDataFromSource = async (
+	engine: any,
+	sourceConfig: DataServiceConfig,
+	dataElements: string[],
+	periods: string[],
+	orgUnits: string[],
+	pageSize?: number,
+) => {
 	try {
 		// Step 1: Group data elements by categoryOptionCombo
 		const groupedByCombo = new Map<string, string[]>();
-		
-		dataElements.forEach(de => {
-			const combo = de.includes('.') ? de.split('.')[1] : 'default';
+
+		dataElements.forEach((de) => {
+			const combo = de.includes(".") ? de.split(".")[1] : "default";
 			if (!groupedByCombo.has(combo)) {
 				groupedByCombo.set(combo, []);
 			}
@@ -251,31 +337,48 @@ const fetchDataFromSource = async (engine: any, sourceConfig: DataServiceConfig,
 		// Step 2: Split each COC group by URL length limit only if necessary
 		const baseUrl = `routes/${sourceConfig.source.routeId}/run/analytics/dataValueSet.json`;
 		const allBatches: string[][] = [];
-		
+
 		for (const elements of groupedByCombo.values()) {
-			const urlBatches = splitByUrlLength(baseUrl, elements, periods, orgUnits);
+			const urlBatches = splitByUrlLength(
+				baseUrl,
+				elements,
+				periods,
+				orgUnits,
+			);
 			allBatches.push(...urlBatches);
 		}
 
 		// Step 3: Fetch all batches in parallel
-		const batchPromises = allBatches.map(elements =>
-			fetchDataFromSourceBatch(engine, sourceConfig, elements, periods, orgUnits)
+		const batchPromises = allBatches.map((elements) =>
+			fetchDataFromSourceBatch(
+				engine,
+				sourceConfig,
+				elements,
+				periods,
+				orgUnits,
+			),
 		);
-		
+
 		const batchResults = await Promise.all(batchPromises);
 		const allData = batchResults.flat();
-		
+
 		return allData;
 	} catch (error) {
-		console.error('Error fetching source data:', error);
+		console.error("Error fetching source data:", error);
 		throw error;
 	}
 };
 
-const fetchDataFromSourceBatch = async (engine: any, sourceConfig: DataServiceConfig, dataElements: string[], periods: string[], orgUnits: string[]) => {
+const fetchDataFromSourceBatch = async (
+	engine: any,
+	sourceConfig: DataServiceConfig,
+	dataElements: string[],
+	periods: string[],
+	orgUnits: string[],
+) => {
 	try {
-		const dxItems = dataElements.map(de => {
-			if (de.includes('.')) {
+		const dxItems = dataElements.map((de) => {
+			if (de.includes(".")) {
 				return de;
 			} else {
 				return de;
@@ -284,7 +387,7 @@ const fetchDataFromSourceBatch = async (engine: any, sourceConfig: DataServiceCo
 		const dimensions = {
 			dx: dxItems,
 			pe: periods,
-			ou: orgUnits
+			ou: orgUnits,
 		};
 		const url = `routes/${sourceConfig.source.routeId}/run/analytics/dataValueSet.json`;
 		const queryParams: string[] = [];
@@ -294,31 +397,42 @@ const fetchDataFromSourceBatch = async (engine: any, sourceConfig: DataServiceCo
 				queryParams.push(`dimension=${dimensionParam}`);
 			}
 		});
-		queryParams.push('hierarchyMeta=true');
-		queryParams.push('includeMetadataDetails=true');
-		const queryString = queryParams.join('&');
+		queryParams.push("hierarchyMeta=true");
+		queryParams.push("includeMetadataDetails=true");
+		const queryString = queryParams.join("&");
 		const fullUrl = queryString ? `${url}?${queryString}` : url;
 
 		const query = {
 			dataValues: {
-				resource: fullUrl
-			}
+				resource: fullUrl,
+			},
 		};
 		const timeoutMs = 120000;
 		const timeoutPromise = new Promise((_, reject) => {
-			setTimeout(() => reject(new Error(`Source data fetch timeout after ${timeoutMs / 1000} seconds`)), timeoutMs);
+			setTimeout(
+				() =>
+					reject(
+						new Error(
+							`Source data fetch timeout after ${timeoutMs / 1000} seconds`,
+						),
+					),
+				timeoutMs,
+			);
 		});
 
 		const result = await Promise.race([
 			engine.query(query),
-			timeoutPromise
+			timeoutPromise,
 		]);
 		const fetchedDataValues = result.dataValues?.dataValues || [];
 		const transformedDataValues = fetchedDataValues.map((dv: any) => {
-			const originalDataElement = dataElements.find(de => {
-				if (de.includes('.')) {
-					const [deId, coId] = de.split('.');
-					return deId === dv.dataElement && coId === dv.categoryOptionCombo;
+			const originalDataElement = dataElements.find((de) => {
+				if (de.includes(".")) {
+					const [deId, coId] = de.split(".");
+					return (
+						deId === dv.dataElement &&
+						coId === dv.categoryOptionCombo
+					);
 				} else {
 					return de === dv.dataElement;
 				}
@@ -326,26 +440,36 @@ const fetchDataFromSourceBatch = async (engine: any, sourceConfig: DataServiceCo
 
 			return {
 				...dv,
-				dataElement: originalDataElement || (dv.categoryOptionCombo && dv.categoryOptionCombo !== 'default'
-					? `${dv.dataElement}.${dv.categoryOptionCombo}`
-					: dv.dataElement)
+				dataElement:
+					originalDataElement ||
+					(dv.categoryOptionCombo &&
+					dv.categoryOptionCombo !== "default"
+						? `${dv.dataElement}.${dv.categoryOptionCombo}`
+						: dv.dataElement),
 			};
 		});
 
 		return transformedDataValues;
 	} catch (error) {
-		console.error('Error fetching source data batch:', error);
+		console.error("Error fetching source data batch:", error);
 		throw error;
 	}
 };
 
-const fetchDataFromDestination = async (engine: any, destinationConfig: DataServiceConfig, dataElements: string[], periods: string[], orgUnits: string[], pageSize?: number) => {
+const fetchDataFromDestination = async (
+	engine: any,
+	destinationConfig: DataServiceConfig,
+	dataElements: string[],
+	periods: string[],
+	orgUnits: string[],
+	pageSize?: number,
+) => {
 	try {
 		// Step 1: Group data elements by categoryOptionCombo
 		const groupedByCombo = new Map<string, string[]>();
-		
-		dataElements.forEach(de => {
-			const combo = de.includes('.') ? de.split('.')[1] : 'default';
+
+		dataElements.forEach((de) => {
+			const combo = de.includes(".") ? de.split(".")[1] : "default";
 			if (!groupedByCombo.has(combo)) {
 				groupedByCombo.set(combo, []);
 			}
@@ -355,31 +479,48 @@ const fetchDataFromDestination = async (engine: any, destinationConfig: DataServ
 		// Step 2: Split each COC group by URL length limit only if necessary
 		const baseUrl = `analytics/dataValueSet.json`;
 		const allBatches: string[][] = [];
-		
+
 		for (const elements of groupedByCombo.values()) {
-			const urlBatches = splitByUrlLength(baseUrl, elements, periods, orgUnits);
+			const urlBatches = splitByUrlLength(
+				baseUrl,
+				elements,
+				periods,
+				orgUnits,
+			);
 			allBatches.push(...urlBatches);
 		}
 
 		// Step 3: Fetch all batches in parallel
-		const batchPromises = allBatches.map(elements =>
-			fetchDataFromDestinationBatch(engine, destinationConfig, elements, periods, orgUnits)
+		const batchPromises = allBatches.map((elements) =>
+			fetchDataFromDestinationBatch(
+				engine,
+				destinationConfig,
+				elements,
+				periods,
+				orgUnits,
+			),
 		);
-		
+
 		const batchResults = await Promise.all(batchPromises);
 		const allData = batchResults.flat();
-		
+
 		return allData;
 	} catch (error) {
-		console.error('Error fetching destination data:', error);
+		console.error("Error fetching destination data:", error);
 		return [];
 	}
 };
 
-const fetchDataFromDestinationBatch = async (engine: any, destinationConfig: DataServiceConfig, dataElements: string[], periods: string[], orgUnits: string[]) => {
+const fetchDataFromDestinationBatch = async (
+	engine: any,
+	destinationConfig: DataServiceConfig,
+	dataElements: string[],
+	periods: string[],
+	orgUnits: string[],
+) => {
 	try {
-		const dxItems = dataElements.map(de => {
-			if (de.includes('.')) {
+		const dxItems = dataElements.map((de) => {
+			if (de.includes(".")) {
 				return de;
 			} else {
 				return de;
@@ -388,7 +529,7 @@ const fetchDataFromDestinationBatch = async (engine: any, destinationConfig: Dat
 		const dimensions = {
 			dx: dxItems,
 			pe: periods,
-			ou: orgUnits
+			ou: orgUnits,
 		};
 		const url = `analytics/dataValueSet.json`;
 		const queryParams: string[] = [];
@@ -399,53 +540,65 @@ const fetchDataFromDestinationBatch = async (engine: any, destinationConfig: Dat
 				queryParams.push(`dimension=${dimensionParam}`);
 			}
 		});
-		queryParams.push('hierarchyMeta=true');
-		queryParams.push('includeMetadataDetails=true');
+		queryParams.push("hierarchyMeta=true");
+		queryParams.push("includeMetadataDetails=true");
 
-		const queryString = queryParams.join('&');
+		const queryString = queryParams.join("&");
 		const fullUrl = queryString ? `${url}?${queryString}` : url;
 
 		const query = {
 			dataValues: {
-				resource: fullUrl
-			}
+				resource: fullUrl,
+			},
 		};
 		const timeoutMs = 120000;
 		const timeoutPromise = new Promise((_, reject) => {
-			setTimeout(() => reject(new Error(`Destination data fetch timeout after ${timeoutMs / 1000} seconds`)), timeoutMs);
+			setTimeout(
+				() =>
+					reject(
+						new Error(
+							`Destination data fetch timeout after ${timeoutMs / 1000} seconds`,
+						),
+					),
+				timeoutMs,
+			);
 		});
 
 		const result = await Promise.race([
 			engine.query(query),
-			timeoutPromise
+			timeoutPromise,
 		]);
 		const fetchedDataValues = result.dataValues?.dataValues || [];
 
 		const transformedDataValues = fetchedDataValues.map((dv: any) => {
-			const originalDataElement = dataElements.find(de => {
-				if (de.includes('.')) {
-					const [deId, coId] = de.split('.');
-					return deId === dv.dataElement && coId === dv.categoryOptionCombo;
+			const originalDataElement = dataElements.find((de) => {
+				if (de.includes(".")) {
+					const [deId, coId] = de.split(".");
+					return (
+						deId === dv.dataElement &&
+						coId === dv.categoryOptionCombo
+					);
 				} else {
 					return de === dv.dataElement;
 				}
 			});
 			return {
 				...dv,
-				dataElement: originalDataElement || (dv.categoryOptionCombo && dv.categoryOptionCombo !== 'default'
-					? `${dv.dataElement}.${dv.categoryOptionCombo}`
-					: dv.dataElement)
+				dataElement:
+					originalDataElement ||
+					(dv.categoryOptionCombo &&
+					dv.categoryOptionCombo !== "default"
+						? `${dv.dataElement}.${dv.categoryOptionCombo}`
+						: dv.dataElement),
 			};
 		});
 
 		return transformedDataValues;
 	} catch (error) {
-		console.error('Error fetching destination data batch:', error);
+		console.error("Error fetching destination data batch:", error);
 		return [];
 	}
 };
-
-
 
 // Main validation function
 const performValidation = async (
@@ -453,29 +606,42 @@ const performValidation = async (
 	configId: string,
 	sourceConfig: DataServiceConfig,
 	dataItemsConfigIds: string[],
-	runtimeConfig: any
+	runtimeConfig: any,
 ) => {
 	const session = validationSessions.get(configId);
-	if (!session) throw new Error('Validation session not found');
+	if (!session) throw new Error("Validation session not found");
 
 	try {
 		session.status = DataServiceRunStatus.RUNNING;
 		session.summary.status = DataServiceRunStatus.RUNNING;
 
 		// Phase 1: Initializing (0-5%)
-		updatePhase(configId, 'initializing', 0, 'Preparing validation...');
-		addLogEntry(configId, 'info', 'Starting data validation process');
+		updatePhase(configId, "initializing", 0, "Preparing validation...");
+		addLogEntry(configId, "info", "Starting data validation process");
 
-		const savedParams = localStorage.getItem(`validation-params-${configId}`);
+		const savedParams = localStorage.getItem(
+			`validation-params-${configId}`,
+		);
 		if (!savedParams) {
-			throw new Error('Validation parameters not found. Please restart validation from the form.');
+			throw new Error(
+				"Validation parameters not found. Please restart validation from the form.",
+			);
 		}
 		const fullParams = JSON.parse(savedParams);
 		const periods = fullParams.periods || [];
 		const dataElements = fullParams.dataElements || dataItemsConfigIds;
 
-		updatePhase(configId, 'initializing', 3, 'Fetching root organization units...');
-		addLogEntry(configId, 'info', 'Fetching root organization units from source instance...');
+		updatePhase(
+			configId,
+			"initializing",
+			3,
+			"Fetching root organization units...",
+		);
+		addLogEntry(
+			configId,
+			"info",
+			"Fetching root organization units from source instance...",
+		);
 		let orgUnits: string[] = [];
 		try {
 			const rootOrgUnitsResult = await engine.query({
@@ -483,105 +649,183 @@ const performValidation = async (
 					resource: `organisationUnits`,
 					params: {
 						level: 1,
-						fields: 'id,name',
-						paging: false
-					}
-				}
+						fields: "id,name",
+						paging: false,
+					},
+				},
 			});
-			const rootOrgUnits = (rootOrgUnitsResult.orgUnits as any)?.organisationUnits || [];
+			const rootOrgUnits =
+				(rootOrgUnitsResult.orgUnits as any)?.organisationUnits || [];
 			orgUnits = rootOrgUnits.map((ou: any) => ou.id);
-			addLogEntry(configId, 'info', `Using root organization units: ${rootOrgUnits.map((ou: any) => ou.name).join(', ')}`);
+			addLogEntry(
+				configId,
+				"info",
+				`Using root organization units: ${rootOrgUnits.map((ou: any) => ou.name).join(", ")}`,
+			);
 		} catch (error) {
-			addLogEntry(configId, 'warn', 'Failed to fetch root org units, falling back to user-selected org units');
+			addLogEntry(
+				configId,
+				"warn",
+				"Failed to fetch root org units, falling back to user-selected org units",
+			);
 			orgUnits = fullParams.orgUnits || [];
 		}
 
-		if (periods.length === 0 || dataElements.length === 0 || orgUnits.length === 0) {
-			throw new Error('Missing required validation parameters: periods, data elements, or organization units');
+		if (
+			periods.length === 0 ||
+			dataElements.length === 0 ||
+			orgUnits.length === 0
+		) {
+			throw new Error(
+				"Missing required validation parameters: periods, data elements, or organization units",
+			);
 		}
-		addLogEntry(configId, 'info', `Validating ${dataElements.length} data elements across ${periods.length} periods for ${orgUnits.length} organization units`);
+		addLogEntry(
+			configId,
+			"info",
+			`Validating ${dataElements.length} data elements across ${periods.length} periods for ${orgUnits.length} organization units`,
+		);
 		if (fullParams.configDetails) {
-			addLogEntry(configId, 'info', `Selected configurations: ${fullParams.configDetails.map((c: any) => `${c.name} (${c.dataItemsCount} items)`).join(', ')}`);
+			addLogEntry(
+				configId,
+				"info",
+				`Selected configurations: ${fullParams.configDetails.map((c: any) => `${c.name} (${c.dataItemsCount} items)`).join(", ")}`,
+			);
 		}
-		addLogEntry(configId, 'info', `Periods: ${periods.join(', ')}`);
-		addLogEntry(configId, 'info', `Organization units: ${orgUnits.join(', ')}`);
-		addLogEntry(configId, 'info', `Data elements: ${dataElements.slice(0, 5).join(', ')}${dataElements.length > 5 ? ` and ${dataElements.length - 5} more` : ''}`);
+		addLogEntry(configId, "info", `Periods: ${periods.join(", ")}`);
+		addLogEntry(
+			configId,
+			"info",
+			`Organization units: ${orgUnits.join(", ")}`,
+		);
+		addLogEntry(
+			configId,
+			"info",
+			`Data elements: ${dataElements.slice(0, 5).join(", ")}${dataElements.length > 5 ? ` and ${dataElements.length - 5} more` : ""}`,
+		);
 
 		// Group data elements by categoryOptionCombo for efficient batching
 		const groupedByCombo = new Map<string, string[]>();
-		dataElements.forEach(de => {
-			const combo = de.includes('.') ? de.split('.')[1] : 'default';
+		dataElements.forEach((de) => {
+			const combo = de.includes(".") ? de.split(".")[1] : "default";
 			if (!groupedByCombo.has(combo)) {
 				groupedByCombo.set(combo, []);
 			}
 			groupedByCombo.get(combo)!.push(de);
 		});
-		
-		addLogEntry(configId, 'info', `Data elements grouped into ${groupedByCombo.size} batches by categoryOptionCombo`);
-		
-		const categoryOptionComboIds = [...new Set(
-			dataElements
-				.filter(de => de.includes('.'))
-				.map(de => de.split('.')[1])
-				.filter(coId => coId && coId !== 'default')
-		)];
+
+		addLogEntry(
+			configId,
+			"info",
+			`Data elements grouped into ${groupedByCombo.size} batches by categoryOptionCombo`,
+		);
+
+		const categoryOptionComboIds = [
+			...new Set(
+				dataElements
+					.filter((de) => de.includes("."))
+					.map((de) => de.split(".")[1])
+					.filter((coId) => coId && coId !== "default"),
+			),
+		];
 
 		// Phase 2: Fetching metadata (5-15%)
-		updatePhase(configId, 'fetching-metadata', 5, 'Fetching metadata (org units, data elements)...');
-		addLogEntry(configId, 'info', 'Fetching metadata for validation...');
+		updatePhase(
+			configId,
+			"fetching-metadata",
+			5,
+			"Fetching metadata (org units, data elements)...",
+		);
+		addLogEntry(configId, "info", "Fetching metadata for validation...");
 
 		const metadataPromises = [
-			engine.query({
-				orgUnits: {
-					resource: 'organisationUnits',
-					params: {
-						filter: `id:in:[${orgUnits.join(',')}]`,
-						fields: 'id,name',
-						paging: false
-					}
-				}
-			}).then((result: any) => result.orgUnits?.organisationUnits || []),
+			engine
+				.query({
+					orgUnits: {
+						resource: "organisationUnits",
+						params: {
+							filter: `id:in:[${orgUnits.join(",")}]`,
+							fields: "id,name",
+							paging: false,
+						},
+					},
+				})
+				.then(
+					(result: any) => result.orgUnits?.organisationUnits || [],
+				),
 
-			engine.query({
-				dataElements: {
-					resource: 'dataElements',
-					params: {
-						filter: `id:in:[${[...new Set(dataElements.map(de => de.includes('.') ? de.split('.')[0] : de))].join(',')}]`,
-						fields: 'id,name',
-						paging: false
-					}
-				}
-			}).then((result: any) => result.dataElements?.dataElements || [])
+			engine
+				.query({
+					dataElements: {
+						resource: "dataElements",
+						params: {
+							filter: `id:in:[${[...new Set(dataElements.map((de) => (de.includes(".") ? de.split(".")[0] : de)))].join(",")}]`,
+							fields: "id,name",
+							paging: false,
+						},
+					},
+				})
+				.then((result: any) => result.dataElements?.dataElements || []),
 		];
 
 		if (categoryOptionComboIds.length > 0) {
 			metadataPromises.push(
-				engine.query({
-					categoryOptionCombos: {
-						resource: 'categoryOptionCombos',
-						params: {
-							filter: `id:in:[${categoryOptionComboIds.join(',')}]`,
-							fields: 'id,name',
-							paging: false
-						}
-					}
-				}).then((result: any) => result.categoryOptionCombos?.categoryOptionCombos || [])
+				engine
+					.query({
+						categoryOptionCombos: {
+							resource: "categoryOptionCombos",
+							params: {
+								filter: `id:in:[${categoryOptionComboIds.join(",")}]`,
+								fields: "id,name",
+								paging: false,
+							},
+						},
+					})
+					.then(
+						(result: any) =>
+							result.categoryOptionCombos?.categoryOptionCombos ||
+							[],
+					),
 			);
 		}
 
 		const metadataResults = await Promise.all(metadataPromises);
-		const [orgUnitsMetadata, dataElementsMetadata, categoryOptionCombosMetadata = []] = metadataResults;
-		updatePhase(configId, 'fetching-metadata', 15, 'Metadata loaded successfully');
-		const orgUnitNamesMap = new Map(orgUnitsMetadata.map((ou: any) => [ou.id, ou.name]));
-		const dataElementNamesMap = new Map(dataElementsMetadata.map((de: any) => [de.id, de.name]));
-		const categoryOptionComboNamesMap = new Map(categoryOptionCombosMetadata.map((coc: any) => [coc.id, coc.name]));
-		const buildDataElementDisplayName = (dataElementId: string, categoryOptionCombo?: string): string => {
-			const baseDataElementId = dataElementId.includes('.') ? dataElementId.split('.')[0] : dataElementId;
-			const coId = dataElementId.includes('.') ? dataElementId.split('.')[1] : categoryOptionCombo;
+		const [
+			orgUnitsMetadata,
+			dataElementsMetadata,
+			categoryOptionCombosMetadata = [],
+		] = metadataResults;
+		updatePhase(
+			configId,
+			"fetching-metadata",
+			15,
+			"Metadata loaded successfully",
+		);
+		const orgUnitNamesMap = new Map(
+			orgUnitsMetadata.map((ou: any) => [ou.id, ou.name]),
+		);
+		const dataElementNamesMap = new Map(
+			dataElementsMetadata.map((de: any) => [de.id, de.name]),
+		);
+		const categoryOptionComboNamesMap = new Map(
+			categoryOptionCombosMetadata.map((coc: any) => [coc.id, coc.name]),
+		);
+		const buildDataElementDisplayName = (
+			dataElementId: string,
+			categoryOptionCombo?: string,
+		): string => {
+			const baseDataElementId = dataElementId.includes(".")
+				? dataElementId.split(".")[0]
+				: dataElementId;
+			const coId = dataElementId.includes(".")
+				? dataElementId.split(".")[1]
+				: categoryOptionCombo;
 
-			const dataElementName = dataElementNamesMap.get(baseDataElementId) as string || baseDataElementId;
+			const dataElementName =
+				(dataElementNamesMap.get(baseDataElementId) as string) ||
+				baseDataElementId;
 
-			if (coId && coId !== 'default') {
+			if (coId && coId !== "default") {
 				const coName = categoryOptionComboNamesMap.get(coId) as string;
 				if (coName) {
 					return `${dataElementName} (${coName})`;
@@ -592,42 +836,88 @@ const performValidation = async (
 		};
 
 		// Phase 3: Fetching source data (15-45%)
-		updatePhase(configId, 'fetching-source', 15, 'Fetching data from source instance...');
-		addLogEntry(configId, 'info', 'Fetching data from source instance');
+		updatePhase(
+			configId,
+			"fetching-source",
+			15,
+			"Fetching data from source instance...",
+		);
+		addLogEntry(configId, "info", "Fetching data from source instance");
 		const sourceData = await fetchDataFromSource(
 			engine,
 			sourceConfig,
 			dataElements,
 			periods,
-			orgUnits
+			orgUnits,
 		);
-		updatePhase(configId, 'fetching-source', 45, `Source data fetched: ${sourceData.length} values`);
+		updatePhase(
+			configId,
+			"fetching-source",
+			45,
+			`Source data fetched: ${sourceData.length} values`,
+		);
 		const skipDestination = fullParams.skipDestination || false;
 		let destinationData: any[] = [];
 		// Phase 4: Fetching destination data (45-75%)
 		if (skipDestination) {
-			updatePhase(configId, 'fetching-destination', 75, 'Skipping destination (source-only mode)');
-			addLogEntry(configId, 'info', 'Skipping destination data fetch as requested (source-only validation)');
+			updatePhase(
+				configId,
+				"fetching-destination",
+				75,
+				"Skipping destination (source-only mode)",
+			);
+			addLogEntry(
+				configId,
+				"info",
+				"Skipping destination data fetch as requested (source-only validation)",
+			);
 		} else {
-			updatePhase(configId, 'fetching-destination', 45, 'Fetching data from destination instance...');
-			addLogEntry(configId, 'info', 'Fetching data from destination instance');
+			updatePhase(
+				configId,
+				"fetching-destination",
+				45,
+				"Fetching data from destination instance...",
+			);
+			addLogEntry(
+				configId,
+				"info",
+				"Fetching data from destination instance",
+			);
 			destinationData = await fetchDataFromDestination(
 				engine,
 				sourceConfig,
 				dataElements,
 				periods,
-				orgUnits
+				orgUnits,
 			);
-			updatePhase(configId, 'fetching-destination', 75, `Destination data fetched: ${destinationData.length} values`);
+			updatePhase(
+				configId,
+				"fetching-destination",
+				75,
+				`Destination data fetched: ${destinationData.length} values`,
+			);
 		}
 
 		if (destinationData.length === 0 && sourceData.length > 0) {
-			addLogEntry(configId, 'warn', 'No destination data retrieved via analytics endpoint.');
-			addLogEntry(configId, 'warn', 'Validation will show all source data as "missing in destination".');
-			addLogEntry(configId, 'info', 'Consider checking: 1) Analytics have been run on destination, 2) Route permissions, 3) Data availability');
+			addLogEntry(
+				configId,
+				"warn",
+				"No destination data retrieved via analytics endpoint.",
+			);
+			addLogEntry(
+				configId,
+				"warn",
+				'Validation will show all source data as "missing in destination".',
+			);
+			addLogEntry(
+				configId,
+				"info",
+				"Consider checking: 1) Analytics have been run on destination, 2) Route permissions, 3) Data availability",
+			);
 		}
 
-		const createDataKey = (dv: any) => `${dv.dataElement}_${dv.period}_${dv.orgUnit}_${dv.categoryOptionCombo || 'default'}`;
+		const createDataKey = (dv: any) =>
+			`${dv.dataElement}_${dv.period}_${dv.orgUnit}_${dv.categoryOptionCombo || "default"}`;
 
 		const sourceMap = new Map();
 		const destinationMap = new Map();
@@ -640,19 +930,35 @@ const performValidation = async (
 			destinationMap.set(createDataKey(dv), dv);
 		});
 
-		addLogEntry(configId, 'info', `Found ${sourceData.length} values in source, ${destinationData.length} values in destination`);
+		addLogEntry(
+			configId,
+			"info",
+			`Found ${sourceData.length} values in source, ${destinationData.length} values in destination`,
+		);
 
 		if (destinationData.length === 0) {
-			addLogEntry(configId, 'warn', 'Proceeding with source-only validation due to destination data limitations');
+			addLogEntry(
+				configId,
+				"warn",
+				"Proceeding with source-only validation due to destination data limitations",
+			);
 		}
 
 		// Phase 5: Comparing data (75-100%)
-		updatePhase(configId, 'comparing', 75, 'Comparing source and destination data...');
-		addLogEntry(configId, 'info', 'Starting data comparison...');
+		updatePhase(
+			configId,
+			"comparing",
+			75,
+			"Comparing source and destination data...",
+		);
+		addLogEntry(configId, "info", "Starting data comparison...");
 
 		let recordsProcessed = 0;
 		let recordsMatched = 0;
-		const totalRecords = Math.max(sourceData.length, destinationData.length);
+		const totalRecords = Math.max(
+			sourceData.length,
+			destinationData.length,
+		);
 		const totalSourceRecords = sourceMap.size;
 
 		for (const [key, sourceValue] of sourceMap) {
@@ -660,15 +966,27 @@ const performValidation = async (
 
 			// Yield to event loop every 100 records to allow UI updates
 			if (recordsProcessed % 100 === 0) {
-				await new Promise(resolve => setTimeout(resolve, 0));
+				await new Promise((resolve) => setTimeout(resolve, 0));
 				// Update progress: 75% + (recordsProcessed / totalSourceRecords) * 20% (up to 95%)
-				const comparisonProgress = 75 + Math.round((recordsProcessed / totalSourceRecords) * 20);
-				updatePhase(configId, 'comparing', comparisonProgress, `Comparing records: ${recordsProcessed.toLocaleString()} / ${totalSourceRecords.toLocaleString()}`);
+				const comparisonProgress =
+					75 +
+					Math.round((recordsProcessed / totalSourceRecords) * 20);
+				updatePhase(
+					configId,
+					"comparing",
+					comparisonProgress,
+					`Comparing records: ${recordsProcessed.toLocaleString()} / ${totalSourceRecords.toLocaleString()}`,
+				);
 			}
 
 			if (!destinationMap.has(key)) {
-				const dataElementDisplayName = buildDataElementDisplayName(sourceValue.dataElement, sourceValue.categoryOptionCombo);
-				const orgUnitName = orgUnitNamesMap.get(sourceValue.orgUnit) || sourceValue.orgUnit;
+				const dataElementDisplayName = buildDataElementDisplayName(
+					sourceValue.dataElement,
+					sourceValue.categoryOptionCombo,
+				);
+				const orgUnitName =
+					orgUnitNamesMap.get(sourceValue.orgUnit) ||
+					sourceValue.orgUnit;
 
 				addDiscrepancy(configId, {
 					dataElement: sourceValue.dataElement,
@@ -676,28 +994,40 @@ const performValidation = async (
 					orgUnit: sourceValue.orgUnit,
 					orgUnitName,
 					period: sourceValue.period,
-					categoryOptionCombo: sourceValue.categoryOptionCombo || 'default',
+					categoryOptionCombo:
+						sourceValue.categoryOptionCombo || "default",
 					sourceValue: sourceValue.value,
 					destinationValue: null,
-					discrepancyType: 'missing_in_destination',
-					severity: 'major',
-					details: 'Data value exists in source but not in destination'
+					discrepancyType: "missing_in_destination",
+					severity: "major",
+					details:
+						"Data value exists in source but not in destination",
 				});
 			} else {
 				const destValue = destinationMap.get(key);
 				if (sourceValue.value !== destValue.value) {
-					const source = parseFloat(sourceValue.value || '0');
-					const destination = parseFloat(destValue.value || '0');
+					const source = parseFloat(sourceValue.value || "0");
+					const destination = parseFloat(destValue.value || "0");
 					const numericDiff = Math.abs(source - destination);
 					let severity;
 					if (numericDiff === 0) {
-						severity = 'minor';
+						severity = "minor";
 					} else {
-						severity = destination > source ? 'critical' : numericDiff > 100 ? 'major' : 'minor';
+						severity =
+							destination > source
+								? "critical"
+								: numericDiff > 100
+									? "major"
+									: "minor";
 					}
 
-					const dataElementDisplayName = buildDataElementDisplayName(sourceValue.dataElement, sourceValue.categoryOptionCombo);
-					const orgUnitName = orgUnitNamesMap.get(sourceValue.orgUnit) as string || sourceValue.orgUnit;
+					const dataElementDisplayName = buildDataElementDisplayName(
+						sourceValue.dataElement,
+						sourceValue.categoryOptionCombo,
+					);
+					const orgUnitName =
+						(orgUnitNamesMap.get(sourceValue.orgUnit) as string) ||
+						sourceValue.orgUnit;
 
 					addDiscrepancy(configId, {
 						dataElement: sourceValue.dataElement,
@@ -705,12 +1035,13 @@ const performValidation = async (
 						orgUnit: sourceValue.orgUnit,
 						orgUnitName,
 						period: sourceValue.period,
-						categoryOptionCombo: sourceValue.categoryOptionCombo || 'default',
+						categoryOptionCombo:
+							sourceValue.categoryOptionCombo || "default",
 						sourceValue: sourceValue.value,
 						destinationValue: destValue.value,
-						discrepancyType: 'value_mismatch',
+						discrepancyType: "value_mismatch",
 						severity,
-						details: `Source value: ${sourceValue.value}, Destination value: ${destValue.value}, Difference: ${numericDiff}`
+						details: `Source value: ${sourceValue.value}, Destination value: ${destValue.value}, Difference: ${numericDiff}`,
 					});
 				} else {
 					recordsMatched++;
@@ -719,13 +1050,20 @@ const performValidation = async (
 
 			session.summary.recordsProcessed = recordsProcessed;
 			session.summary.recordsMatched = recordsMatched;
-			session.summary.progress = Math.round((recordsProcessed / totalRecords) * 100);
+			session.summary.progress = Math.round(
+				(recordsProcessed / totalRecords) * 100,
+			);
 		}
 
 		for (const [key, destValue] of destinationMap) {
 			if (!sourceMap.has(key)) {
-				const dataElementDisplayName = buildDataElementDisplayName(destValue.dataElement, destValue.categoryOptionCombo);
-				const orgUnitName = orgUnitNamesMap.get(destValue.orgUnit) as string || destValue.orgUnit;
+				const dataElementDisplayName = buildDataElementDisplayName(
+					destValue.dataElement,
+					destValue.categoryOptionCombo,
+				);
+				const orgUnitName =
+					(orgUnitNamesMap.get(destValue.orgUnit) as string) ||
+					destValue.orgUnit;
 
 				addDiscrepancy(configId, {
 					dataElement: destValue.dataElement,
@@ -733,19 +1071,20 @@ const performValidation = async (
 					orgUnit: destValue.orgUnit,
 					orgUnitName,
 					period: destValue.period,
-					categoryOptionCombo: destValue.categoryOptionCombo || 'default',
+					categoryOptionCombo:
+						destValue.categoryOptionCombo || "default",
 					sourceValue: null,
 					destinationValue: destValue.value,
-					discrepancyType: 'missing_in_source',
-					severity: 'minor',
-					details: 'Data value exists in destination but not in source'
+					discrepancyType: "missing_in_source",
+					severity: "minor",
+					details:
+						"Data value exists in destination but not in source",
 				});
 			}
 		}
 
-
 		// Phase 6: Completed (100%)
-		updatePhase(configId, 'completed', 100, 'Validation completed');
+		updatePhase(configId, "completed", 100, "Validation completed");
 		session.status = DataServiceRunStatus.COMPLETED;
 		session.summary.status = DataServiceRunStatus.COMPLETED;
 		session.summary.endTime = new Date().toISOString();
@@ -753,30 +1092,56 @@ const performValidation = async (
 		session.summary.totalRecords = totalRecords;
 
 		if (destinationData.length === 0 && sourceData.length > 0) {
-			addLogEntry(configId, 'success', `Source-only validation completed. Processed ${totalRecords} source records`);
-			addLogEntry(configId, 'info', `All ${session.summary.discrepanciesFound} discrepancies are marked as "missing in destination"`);
-			addLogEntry(configId, 'info', 'Tip: Ensure analytics have been run on destination instance for complete validation');
+			addLogEntry(
+				configId,
+				"success",
+				`Source-only validation completed. Processed ${totalRecords} source records`,
+			);
+			addLogEntry(
+				configId,
+				"info",
+				`All ${session.summary.discrepanciesFound} discrepancies are marked as "missing in destination"`,
+			);
+			addLogEntry(
+				configId,
+				"info",
+				"Tip: Ensure analytics have been run on destination instance for complete validation",
+			);
 		} else {
-			addLogEntry(configId, 'success', `Full analytics-based validation completed. Found ${session.summary.discrepanciesFound} discrepancies out of ${totalRecords} records`);
+			addLogEntry(
+				configId,
+				"success",
+				`Full analytics-based validation completed. Found ${session.summary.discrepanciesFound} discrepancies out of ${totalRecords} records`,
+			);
 		}
 
-		return { success: true, message: 'Validation completed successfully' };
-
+		return { success: true, message: "Validation completed successfully" };
 	} catch (error) {
-		updatePhase(configId, 'failed', session.summary.progress, 'Validation failed');
+		updatePhase(
+			configId,
+			"failed",
+			session.summary.progress,
+			"Validation failed",
+		);
 		session.status = DataServiceRunStatus.FAILED;
 		session.summary.status = DataServiceRunStatus.FAILED;
 		session.summary.endTime = new Date().toISOString();
 
-		const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-		addLogEntry(configId, 'error', `Validation failed: ${errorMessage}`, { error: errorMessage });
+		const errorMessage =
+			error instanceof Error ? error.message : "Unknown error occurred";
+		addLogEntry(configId, "error", `Validation failed: ${errorMessage}`, {
+			error: errorMessage,
+		});
 
 		throw error;
 	}
 };
 
 // Hook for starting/re-running validation
-export function useStartValidation(configId: string, sourceConfig: DataServiceConfig) {
+export function useStartValidation(
+	configId: string,
+	sourceConfig: DataServiceConfig,
+) {
 	const queryClient = useQueryClient();
 	const engine = useDataEngine();
 
@@ -803,40 +1168,66 @@ export function useStartValidation(configId: string, sourceConfig: DataServiceCo
 					criticalDiscrepancies: 0,
 					majorDiscrepancies: 0,
 					minorDiscrepancies: 0,
-					progress: 0
+					progress: 0,
 				},
 				config: {
 					...validationRequest,
-					sourceConfig
-				}
+					sourceConfig,
+				},
 			};
 
 			validationSessions.set(configId, session);
 
 			setTimeout(async () => {
 				try {
-					await performValidation(engine, configId, sourceConfig, validationRequest.dataItemsConfigIds, validationRequest.runtimeConfig);
+					await performValidation(
+						engine,
+						configId,
+						sourceConfig,
+						validationRequest.dataItemsConfigIds,
+						validationRequest.runtimeConfig,
+					);
 				} catch (error) {
-					console.error('Validation failed:', error);
+					console.error("Validation failed:", error);
 					const currentSession = validationSessions.get(configId);
 					if (currentSession) {
 						currentSession.status = DataServiceRunStatus.FAILED;
-						currentSession.summary.status = DataServiceRunStatus.FAILED;
-						addLogEntry(configId, 'error', `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+						currentSession.summary.status =
+							DataServiceRunStatus.FAILED;
+						addLogEntry(
+							configId,
+							"error",
+							`Validation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+						);
 					}
 				}
 
-				queryClient.invalidateQueries({ queryKey: ["validation-logs", configId] });
-				queryClient.invalidateQueries({ queryKey: ["validation-status", configId] });
-				queryClient.invalidateQueries({ queryKey: ["validation-discrepancies", configId] });
+				queryClient.invalidateQueries({
+					queryKey: ["validation-logs", configId],
+				});
+				queryClient.invalidateQueries({
+					queryKey: ["validation-status", configId],
+				});
+				queryClient.invalidateQueries({
+					queryKey: ["validation-discrepancies", configId],
+				});
 			}, 100);
 
-			return { success: true, message: 'Validation started successfully' };
+			return {
+				success: true,
+				message: "Validation started successfully",
+			};
 		},
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["validation-logs", configId] });
-			queryClient.invalidateQueries({ queryKey: ["validation-status", configId] });
-			queryClient.invalidateQueries({ queryKey: ["validation-discrepancies", configId] });
+			queryClient.invalidateQueries({
+				queryKey: ["validation-logs", configId],
+			});
+			queryClient.invalidateQueries({
+				queryKey: ["validation-status", configId],
+			});
+			queryClient.invalidateQueries({
+				queryKey: ["validation-discrepancies", configId],
+			});
 		},
 	});
 }
@@ -849,7 +1240,7 @@ export function useRerunValidation(configId: string) {
 		mutationFn: async () => {
 			const session = validationSessions.get(configId);
 			if (!session) {
-				throw new Error('No previous validation session found');
+				throw new Error("No previous validation session found");
 			}
 
 			session.status = DataServiceRunStatus.QUEUED;
@@ -868,7 +1259,7 @@ export function useRerunValidation(configId: string) {
 				criticalDiscrepancies: 0,
 				majorDiscrepancies: 0,
 				minorDiscrepancies: 0,
-				progress: 0
+				progress: 0,
 			};
 
 			setTimeout(async () => {
@@ -878,42 +1269,64 @@ export function useRerunValidation(configId: string) {
 						configId,
 						session.config.sourceConfig,
 						session.config.dataItemsConfigIds,
-						session.config.runtimeConfig
+						session.config.runtimeConfig,
 					);
 				} catch (error) {
-					console.error('Validation failed:', error);
+					console.error("Validation failed:", error);
 				}
 
-				queryClient.invalidateQueries({ queryKey: ["validation-logs", configId] });
-				queryClient.invalidateQueries({ queryKey: ["validation-status", configId] });
-				queryClient.invalidateQueries({ queryKey: ["validation-discrepancies", configId] });
+				queryClient.invalidateQueries({
+					queryKey: ["validation-logs", configId],
+				});
+				queryClient.invalidateQueries({
+					queryKey: ["validation-status", configId],
+				});
+				queryClient.invalidateQueries({
+					queryKey: ["validation-discrepancies", configId],
+				});
 			}, 100);
 
-			return { success: true, message: 'Validation restarted successfully' };
+			return {
+				success: true,
+				message: "Validation restarted successfully",
+			};
 		},
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["validation-logs", configId] });
-			queryClient.invalidateQueries({ queryKey: ["validation-status", configId] });
-			queryClient.invalidateQueries({ queryKey: ["validation-discrepancies", configId] });
+			queryClient.invalidateQueries({
+				queryKey: ["validation-logs", configId],
+			});
+			queryClient.invalidateQueries({
+				queryKey: ["validation-status", configId],
+			});
+			queryClient.invalidateQueries({
+				queryKey: ["validation-discrepancies", configId],
+			});
 		},
 	});
 }
 
 // Export functions
 const exportToCSV = (data: any[]): string => {
-	if (data.length === 0) return '';
+	if (data.length === 0) return "";
 
 	const headers = Object.keys(data[0]);
 	const csvContent = [
-		headers.join(','),
-		...data.map(row => headers.map(header => {
-			const value = row[header];
-			if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
-				return `"${value.replace(/"/g, '""')}"`;
-			}
-			return value;
-		}).join(','))
-	].join('\n');
+		headers.join(","),
+		...data.map((row) =>
+			headers
+				.map((header) => {
+					const value = row[header];
+					if (
+						typeof value === "string" &&
+						(value.includes(",") || value.includes('"'))
+					) {
+						return `"${value.replace(/"/g, '""')}"`;
+					}
+					return value;
+				})
+				.join(","),
+		),
+	].join("\n");
 
 	return csvContent;
 };
@@ -931,12 +1344,12 @@ export function useExportValidationResults(configId: string) {
 		}) => {
 			const session = validationSessions.get(configId);
 			if (!session) {
-				throw new Error('Validation session not found');
+				throw new Error("Validation session not found");
 			}
 
 			const exportData: any = {
 				summary: session.summary,
-				exportedAt: new Date().toISOString()
+				exportedAt: new Date().toISOString(),
 			};
 
 			if (options.includeDiscrepancies) {
@@ -952,28 +1365,28 @@ export function useExportValidationResults(configId: string) {
 			let fileExtension: string;
 
 			switch (options.format) {
-				case 'csv':
+				case "csv":
 					if (options.includeDiscrepancies) {
 						content = exportToCSV(session.discrepancies);
 					} else {
 						content = exportToCSV([session.summary]);
 					}
-					mimeType = 'text/csv';
-					fileExtension = 'csv';
+					mimeType = "text/csv";
+					fileExtension = "csv";
 					break;
-				case 'json':
+				case "json":
 					content = exportToJSON(exportData);
-					mimeType = 'application/json';
-					fileExtension = 'json';
+					mimeType = "application/json";
+					fileExtension = "json";
 					break;
-				case 'excel':
+				case "excel":
 					if (options.includeDiscrepancies) {
 						content = exportToCSV(session.discrepancies);
 					} else {
 						content = exportToCSV([session.summary]);
 					}
-					mimeType = 'text/csv';
-					fileExtension = 'csv';
+					mimeType = "text/csv";
+					fileExtension = "csv";
 					break;
 				default:
 					throw new Error(`Unsupported format: ${options.format}`);
@@ -983,7 +1396,7 @@ export function useExportValidationResults(configId: string) {
 				content,
 				mimeType,
 				fileExtension,
-				filename: `validation-results-${configId}-${new Date().toISOString().split('T')[0]}.${fileExtension}`
+				filename: `validation-results-${configId}-${new Date().toISOString().split("T")[0]}.${fileExtension}`,
 			};
 		},
 	});
@@ -998,8 +1411,8 @@ export function useAnalyticsLastRun() {
 			try {
 				const result = await engine.query({
 					info: {
-						resource: 'system/info'
-					}
+						resource: "system/info",
+					},
 				});
 
 				const info = result.info as any;
@@ -1008,7 +1421,7 @@ export function useAnalyticsLastRun() {
 					lastAnalyticsTableRuntime: info.lastAnalyticsTableRuntime,
 				};
 			} catch (error) {
-				console.error('Error fetching analytics last run:', error);
+				console.error("Error fetching analytics last run:", error);
 				return null;
 			}
 		},

@@ -42,3 +42,5 @@ yarn-error.log*
 /apps/manager/cypress.env.json
 /services/data-service/logs
 /services/data-service/outputs
+/services/data-service/app/
+/services/data-service/bundle/

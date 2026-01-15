@@ -13,6 +13,8 @@
       <excludeFolder url="file://$MODULE_DIR$/apps/portal/.turbo" />
       <excludeFolder url="file://$MODULE_DIR$/apps/manager/.turbo" />
       <excludeFolder url="file://$MODULE_DIR$/apps/docs/.docusaurus" />
+      <excludeFolder url="file://$MODULE_DIR$/services/data-service/app" />
+      <excludeFolder url="file://$MODULE_DIR$/services/data-service/bundle" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
