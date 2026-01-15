@@ -1,5 +1,5 @@
 import { defineConfig } from "tsup";
-import { access, mkdir, rm } from "node:fs/promises";
+import { access, copyFile, mkdir, rm } from "node:fs/promises";
 import config from "./package.json";
 //@ts-expect-error missing types for bestzip
 import bestzip from "bestzip";
@@ -23,7 +23,7 @@ async function bundleApp() {
 }
 
 export default defineConfig({
-	entry: ["src/app.ts", "src/routes/**/*.ts"],
+	entry: ["src/app.ts", "src/routes/**/*.ts", "src/rabbit/worker.ts"],
 	minify: false,
 	format: ["esm"],
 	splitting: false,
@@ -34,8 +34,10 @@ export default defineConfig({
 	treeshake: "safest",
 	platform: "node",
 	target: "esnext",
+	skipNodeModulesBundle: true,
 	noExternal: ["@packages/shared"],
 	onSuccess: async () => {
+		await copyFile("package.prod.json", `${outDir}/package.json`);
 		await bundleApp();
 	},
 });

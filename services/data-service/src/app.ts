@@ -8,6 +8,7 @@ import path, { dirname } from "path";
 import swagger from "swagger-ui-express";
 import { fileURLToPath } from "url";
 import { connectRabbit } from "@/rabbit/connection";
+import logger from "@/logging";
 
 interface HttpError extends Error {
 	status?: number;
@@ -24,14 +25,16 @@ const __dirname = dirname(__filename);
 
 const app = express();
 app.use(express.json());
+
+logger.info(`Initializing FlexiPortal Data Service`);
 await initialize({
 	app,
 	apiDoc: apiDoc,
-	paths: path.resolve(__dirname, "./routes"),
+	paths: path.resolve(__dirname, "routes"),
 	exposeApiDocs: process.env.NODE_ENV !== "production",
 	validateApiDoc: false,
 	routesGlob: "**/*.{ts,js,mjs}",
-	routesIndexFileRegExp: /(?:index)?\.([tj]s|mjs)$/,
+	routesIndexFileRegExp: /(?:index)?\.(m?[tj]s)$/,
 	docsPath: `/openapi`,
 });
 

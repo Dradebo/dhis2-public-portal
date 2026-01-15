@@ -33,10 +33,18 @@ ENV DATA_SERVICE_PORT=3000
 RUN addgroup --system --gid 1001 data-service
 RUN adduser --system --uid 1001 data-service
 
+COPY  --from=builder --chown=data-service:data-service /app/services/data-service/app ./
+
+VOLUME ["/app/logs", "/app/outputs"]
+
+RUN bun install
+
+RUN chown -R data-service:data-service /app
+
 USER data-service
 
-COPY  --from=builder --chown=data-service:data-service /app/services/data-service/app/* ./
-
 EXPOSE 3000
+
+
 
 CMD ["bun", "run", "app.mjs"]
