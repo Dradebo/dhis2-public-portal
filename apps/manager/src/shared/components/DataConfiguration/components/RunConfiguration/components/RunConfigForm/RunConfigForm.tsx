@@ -16,17 +16,19 @@ import React from "react";
 import i18n from "@dhis2/d2-i18n";
 import { PeriodSelector } from "./components/PeriodSelector";
 import { z } from "zod";
-import { useAlert, useDataEngine } from "@dhis2/app-runtime";
+import { useAlert, useConfig, useDataEngine } from "@dhis2/app-runtime";
 import { ConfigSelector } from "./components/ConfigSelector";
 import { useQueryClient } from "@tanstack/react-query";
 import { RHFCheckboxField, RHFSingleSelectField } from "@hisptz/dhis2-ui";
 import { RHFNumberField } from "../../../../../Fields/RHFNumberField";
 import { RHFMultiSelectField } from "../../../../../Fields/RHFMultiSelectField";
 import { SourceMetadataSelector } from "./components/SourceMetadataSelector";
-import { downloadMetadata, downloadData, startDataDeletion } from "../../../../../../services/dataServiceClient";
+import {
+	downloadData,
+	downloadMetadata,
+} from "../../../../../../services/dataServiceClient";
 import { useNavigate } from "@tanstack/react-router";
 import { useStartValidation } from "../../../../../DataConfiguration/components/Validationlogs/hooks/validation";
-import { useConfig } from "@dhis2/app-runtime";
 
 const runConfigSchema = z.object({
 	service: z.enum([
@@ -36,10 +38,18 @@ const runConfigSchema = z.object({
 		"data-deletion",
 	]),
 	metadataSource: z.enum(["source", "flexiportal-config"]).optional(),
-	metadataTypes: z.array(z.enum(["visualizations", "maps", "dashboards"])).optional(),
-	selectedVisualizations: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
-	selectedMaps: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
-	selectedDashboards: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
+	metadataTypes: z
+		.array(z.enum(["visualizations", "maps", "dashboards"]))
+		.optional(),
+	selectedVisualizations: z
+		.array(z.object({ id: z.string(), name: z.string() }))
+		.optional(),
+	selectedMaps: z
+		.array(z.object({ id: z.string(), name: z.string() }))
+		.optional(),
+	selectedDashboards: z
+		.array(z.object({ id: z.string(), name: z.string() }))
+		.optional(),
 	runtimeConfig: dataServiceRuntimeConfig.extend({
 		periods: z.array(z.string()).optional(),
 	}),
@@ -86,10 +96,18 @@ export function RunConfigForm({
 		},
 	});
 
-	const selectedService = useWatch({ control: form.control, name: "service" });
-	const metadataSource = useWatch({ control: form.control, name: "metadataSource" });
-	const metadataTypes = useWatch({ control: form.control, name: "metadataTypes" });
-
+	const selectedService = useWatch({
+		control: form.control,
+		name: "service",
+	});
+	const metadataSource = useWatch({
+		control: form.control,
+		name: "metadataSource",
+	});
+	const metadataTypes = useWatch({
+		control: form.control,
+		name: "metadataTypes",
+	});
 
 	const onSubmit = async (data: RunConfigFormValues) => {
 		try {
@@ -101,15 +119,25 @@ export function RunConfigForm({
 					selectedMaps: data.selectedMaps || [],
 					selectedDashboards: data.selectedDashboards || [],
 				};
-				result = await downloadMetadata(engine, config.id, metadataRequest, serverVersion);
+				result = await downloadMetadata(
+					engine,
+					config.id,
+					metadataRequest,
+					serverVersion,
+				);
 			} else if (data.service === "data-deletion") {
 				const deletionRequest = {
 					dataItemsConfigIds: data.dataItemsConfigIds,
 					runtimeConfig: data.runtimeConfig,
-					isDelete: true
+					isDelete: true,
 				};
 
-				result = await downloadData(engine, config.id, deletionRequest, serverVersion);
+				result = await downloadData(
+					engine,
+					config.id,
+					deletionRequest,
+					serverVersion,
+				);
 			} else if (data.service === "data-validation") {
 				const validationRequest = {
 					dataItemsConfigIds: data.dataItemsConfigIds,
@@ -120,22 +148,26 @@ export function RunConfigForm({
 				const selectedPeriods = data.runtimeConfig.periods || [];
 				if (selectedPeriods.length === 0) {
 					show({
-						message: i18n.t('Please select at least one period for validation'),
-						type: { critical: true }
+						message: i18n.t(
+							"Please select at least one period for validation",
+						),
+						type: { critical: true },
 					});
 					return;
 				}
 
 				// Get selected config items details
-				const selectedConfigs = config.itemsConfig.filter(item =>
-					data.dataItemsConfigIds.includes(item.id)
+				const selectedConfigs = config.itemsConfig.filter((item) =>
+					data.dataItemsConfigIds.includes(item.id),
 				);
 
 				// Extract all data elements and org units from selected configs
-				const allDataElements = selectedConfigs.flatMap(configItem =>
-					configItem.dataItems.map(dataItem => dataItem.id)
+				const allDataElements = selectedConfigs.flatMap((configItem) =>
+					configItem.dataItems.map((dataItem) => dataItem.id),
 				);
-				const allOrgUnits = selectedConfigs.map(configItem => configItem.parentOrgUnitId);
+				const allOrgUnits = selectedConfigs.map(
+					(configItem) => configItem.parentOrgUnitId,
+				);
 
 				// Store comprehensive validation parameters for re-run functionality
 				const fullValidationData = {
@@ -143,39 +175,53 @@ export function RunConfigForm({
 					periods: selectedPeriods,
 					dataElements: allDataElements,
 					orgUnits: allOrgUnits,
-					configDetails: selectedConfigs.map(item => ({
+					configDetails: selectedConfigs.map((item) => ({
 						id: item.id,
 						name: item.name,
 						type: item.type,
 						periodTypeId: item.periodTypeId,
 						dataItemsCount: item.dataItems.length,
 						parentOrgUnitId: item.parentOrgUnitId,
-						orgUnitLevel: item.orgUnitLevel
-					}))
+						orgUnitLevel: item.orgUnitLevel,
+					})),
 				};
-
-				localStorage.setItem(`validation-params-${config.id}`, JSON.stringify(fullValidationData));
-
+				localStorage.setItem(
+					`validation-params-${config.id}`,
+					JSON.stringify(fullValidationData),
+				);
 				result = await startValidation.mutateAsync(validationRequest);
 			} else {
-
 				const dataRequest = {
 					dataItemsConfigIds: data.dataItemsConfigIds,
 					runtimeConfig: data.runtimeConfig,
 				};
 
-				result = await downloadData(engine, config.id, dataRequest, serverVersion);
+				result = await downloadData(
+					engine,
+					config.id,
+					dataRequest,
+					serverVersion,
+				);
 			}
 
 			queryClient.invalidateQueries({
 				queryKey: ["data-service-logs", config.id],
 			});
 
-			let successMessage = result.message || i18n.t("Service started successfully");
+			queryClient.invalidateQueries({
+				queryKey: ["config-status", config.id],
+			});
+
+			let successMessage =
+				result.message || i18n.t("Service started successfully");
 			if (data.service === "data-deletion") {
-				successMessage = i18n.t("Data deletion process started successfully. Check the queue for progress.");
+				successMessage = i18n.t(
+					"Data deletion process started successfully. Check the queue for progress.",
+				);
 			} else if (data.service === "data-validation") {
-				successMessage = i18n.t("Data validation process started successfully. Redirecting to validation logs...");
+				successMessage = i18n.t(
+					"Data validation process started successfully. Redirecting to validation logs...",
+				);
 			}
 
 			show({
@@ -205,7 +251,8 @@ export function RunConfigForm({
 				type: { critical: true },
 			});
 		}
-	}; return (
+	};
+	return (
 		<FormProvider {...form}>
 			<Modal hide={hide} onClose={onClose} position="middle">
 				<ModalTitle>
@@ -214,16 +261,22 @@ export function RunConfigForm({
 				<ModalContent>
 					<form className="flex flex-col gap-2">
 						{selectedService === "data-validation" && (
-							<NoticeBox warning title={i18n.t("Analytics Required")}>
+							<NoticeBox
+								warning
+								title={i18n.t("Analytics Required")}
+							>
 								{i18n.t(
-									"Please ensure analytics have been run on the source instance before proceeding with validation. Running analytics ensures the data is up-to-date for accurate validation results."
+									"Please ensure analytics have been run on the source instance before proceeding with validation. Running analytics ensures the data is up-to-date for accurate validation results.",
 								)}
 							</NoticeBox>
 						)}
 						{selectedService === "data-deletion" && (
-							<NoticeBox error title={i18n.t("Destructive Operation")}>
+							<NoticeBox
+								error
+								title={i18n.t("Destructive Operation")}
+							>
 								{i18n.t(
-									"This operation will permanently delete all data files for the selected configuration items and periods. This action cannot be undone."
+									"This operation will permanently delete all data files for the selected configuration items and periods. This action cannot be undone.",
 								)}
 							</NoticeBox>
 						)}
@@ -256,11 +309,21 @@ export function RunConfigForm({
 								<RHFSingleSelectField
 									name="metadataSource"
 									label={i18n.t("Metadata Source")}
-									placeholder={i18n.t("Select metadata source")}
+									placeholder={i18n.t(
+										"Select metadata source",
+									)}
 									required
 									options={[
-										{ label: i18n.t("Browse from Source"), value: "source" },
-										{ label: i18n.t("Extract from FlexiPortal Configuration"), value: "flexiportal-config" },
+										{
+											label: i18n.t("Browse from Source"),
+											value: "source",
+										},
+										{
+											label: i18n.t(
+												"Extract from FlexiPortal Configuration",
+											),
+											value: "flexiportal-config",
+										},
 									]}
 								/>
 
@@ -269,20 +332,37 @@ export function RunConfigForm({
 										<RHFMultiSelectField
 											name="metadataTypes"
 											label={i18n.t("Metadata Types")}
-											placeholder={i18n.t("Select metadata types")}
+											placeholder={i18n.t(
+												"Select metadata types",
+											)}
 											required
 											options={[
-												{ label: i18n.t("Visualizations"), value: "visualizations" },
-												{ label: i18n.t("Maps"), value: "maps" },
-												{ label: i18n.t("Dashboards"), value: "dashboards" },
+												{
+													label: i18n.t(
+														"Visualizations",
+													),
+													value: "visualizations",
+												},
+												{
+													label: i18n.t("Maps"),
+													value: "maps",
+												},
+												{
+													label: i18n.t("Dashboards"),
+													value: "dashboards",
+												},
 											]}
 										/>
 
-										{metadataTypes?.includes("visualizations") && (
+										{metadataTypes?.includes(
+											"visualizations",
+										) && (
 											<SourceMetadataSelector
 												name="selectedVisualizations"
 												resourceType="visualizations"
-												label={i18n.t("Select Visualizations")}
+												label={i18n.t(
+													"Select Visualizations",
+												)}
 												config={config}
 												required
 											/>
@@ -298,11 +378,15 @@ export function RunConfigForm({
 											/>
 										)}
 
-										{metadataTypes?.includes("dashboards") && (
+										{metadataTypes?.includes(
+											"dashboards",
+										) && (
 											<SourceMetadataSelector
 												name="selectedDashboards"
 												resourceType="dashboards"
-												label={i18n.t("Select Dashboards")}
+												label={i18n.t(
+													"Select Dashboards",
+												)}
 												config={config}
 												required
 											/>
@@ -322,7 +406,9 @@ export function RunConfigForm({
 											label={i18n.t("Page size")}
 										/>
 										<RHFCheckboxField
-											name={"runtimeConfig.paginateByData"}
+											name={
+												"runtimeConfig.paginateByData"
+											}
 											label={i18n.t("Paginate by data")}
 										/>
 									</>
@@ -340,12 +426,12 @@ export function RunConfigForm({
 							primary
 						>
 							{form.formState.isSubmitting
-								? (selectedService === "data-deletion"
+								? selectedService === "data-deletion"
 									? i18n.t("Deleting data...")
-									: i18n.t("Requesting run..."))
-								: (selectedService === "data-deletion"
+									: i18n.t("Requesting run...")
+								: selectedService === "data-deletion"
 									? i18n.t("Delete Data")
-									: i18n.t("Run"))}
+									: i18n.t("Run")}
 						</Button>
 					</ButtonStrip>
 				</ModalActions>

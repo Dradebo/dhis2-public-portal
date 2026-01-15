@@ -1,6 +1,6 @@
 import { FormProvider, useForm } from "react-hook-form";
 import { dataServiceConfigSchema } from "@packages/shared/schemas";
-import React from "react";
+import React, { useMemo } from "react";
 import { z, ZodIssueCode } from "zod";
 import {
 	Button,
@@ -18,65 +18,99 @@ import { testDataSource } from "../utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCreateDataSource } from "../hooks/save";
 import { RHFIDField } from "../../Fields/IDField";
+import { FetchError, useDataEngine } from "@dhis2/app-runtime";
+import { DatastoreNamespaces } from "@packages/shared/constants";
 
+export type AddSourceFormValues = z.infer<typeof dataServiceConfigSchema>;
 
-const addSourceFormSchema = dataServiceConfigSchema
-	.extend({
-		source: dataServiceConfigSchema.shape.source
-			.extend({
-				url: z.string().url(),
-				pat: z.string().optional(),
-				username: z.string().optional(),
-				password: z.string().optional(),
-			})
-			.superRefine((data, context) => {
-				if (!(!!data.pat || (!!data.username && !!data.password))) {
-					context.addIssue({
-						code: ZodIssueCode.custom,
-						message: i18n.t(
-							"Please provide either a PAT or username and password",
-						),
-						path: ["source", "pat"],
-					});
-					context.addIssue({
-						code: ZodIssueCode.custom,
-						message: i18n.t(
-							"Please provide either a PAT or username and password",
-						),
-						path: ["source", "username"],
-					});
-				}
-			}),
-	})
-	.superRefine(async (data, context) => {
-		try {
-			const response = await testDataSource({
-				url: data.source.url,
-				pat: data.source.pat,
-				username: data.source.username,
-				password: data.source.password,
-			});
-			if (response.status !== 200) {
-				context.addIssue({
-					code: ZodIssueCode.custom,
-					message: i18n.t(
-						"Could not connect to the DHIS2 instance. Please check the URL, and authentication, and try again.",
+function useFormValidation() {
+	const engine = useDataEngine();
+	return useMemo(
+		() =>
+			dataServiceConfigSchema
+				.extend({
+					id: z.string().refine(
+						async (value) => {
+							try {
+								await engine.query({
+									id: {
+										resource: `dataStore/${DatastoreNamespaces.DATA_SERVICE_CONFIG}/${value}`,
+									},
+								});
+								return false;
+							} catch (error) {
+								if (error instanceof FetchError) {
+									return error.message.includes("404");
+								} else {
+									return false;
+								}
+							}
+						},
+						{
+							message: i18n.t("This ID is already in use"),
+						},
 					),
-					path: ["source", "url"],
-				});
-			}
-		} catch (error) {
-			context.addIssue({
-				code: ZodIssueCode.custom,
-				message: i18n.t(
-					"Could not connect to the DHIS2 instance. Please check the URL, and authentication, and try again.",
-				),
-				path: ["source", "url"],
-			});
-		}
-	});
-
-export type AddSourceFormValues = z.infer<typeof addSourceFormSchema>;
+					source: dataServiceConfigSchema.shape.source
+						.extend({
+							url: z.string().url(),
+							pat: z.string().optional(),
+							username: z.string().optional(),
+							password: z.string().optional(),
+						})
+						.superRefine((data, context) => {
+							if (
+								!(
+									!!data.pat ||
+									(!!data.username && !!data.password)
+								)
+							) {
+								context.addIssue({
+									code: ZodIssueCode.custom,
+									message: i18n.t(
+										"Please provide either a PAT or username and password",
+									),
+									path: ["source", "pat"],
+								});
+								context.addIssue({
+									code: ZodIssueCode.custom,
+									message: i18n.t(
+										"Please provide either a PAT or username and password",
+									),
+									path: ["source", "username"],
+								});
+							}
+						}),
+				})
+				.superRefine(async (data, context) => {
+					try {
+						const response = await testDataSource({
+							url: data.source.url,
+							pat: data.source.pat,
+							username: data.source.username,
+							password: data.source.password,
+						});
+						if (response.status !== 200) {
+							context.addIssue({
+								code: ZodIssueCode.custom,
+								message: i18n.t(
+									"Could not connect to the DHIS2 instance. Please check the URL, and authentication, and try again.",
+								),
+								path: ["source", "url"],
+							});
+						}
+					} catch (error) {
+						context.addIssue({
+							code: ZodIssueCode.custom,
+							message: i18n.t(
+								"Could not connect to the DHIS2 instance. Please check the URL, and authentication, and try again.",
+							),
+							path: ["source", "url"],
+						});
+					}
+				}),
+		[engine],
+	);
+}
 
 export function AddDataSourceForm({
 	hide,
@@ -85,7 +119,8 @@ export function AddDataSourceForm({
 	hide: boolean;
 	onClose: () => void;
 }) {
-	const form = useForm<AddSourceFormValues>({
+	const addSourceFormSchema = useFormValidation();
+	const form = useForm({
 		resolver: zodResolver(addSourceFormSchema),
 		defaultValues: {
 			itemsConfig: [],
@@ -128,7 +163,9 @@ export function AddDataSourceForm({
 				</ModalContent>
 				<ModalActions>
 					<ButtonStrip>
-						<Button type="button" onClick={() => onClose()}>{i18n.t("Cancel")}</Button>
+						<Button type="button" onClick={() => onClose()}>
+							{i18n.t("Cancel")}
+						</Button>
 						<Button
 							loading={
 								form.formState.isSubmitting ||
