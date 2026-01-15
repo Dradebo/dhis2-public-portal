@@ -5,8 +5,8 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
-"POT-Creation-Date: 2026-01-15T09:51:56.820Z\n"
-"PO-Revision-Date: 2026-01-15T09:51:56.821Z\n"
+"POT-Creation-Date: 2026-01-15T11:58:20.011Z\n"
+"PO-Revision-Date: 2026-01-15T11:58:20.012Z\n"
 
 msgid "Could not get Appearance configurations"
 msgstr "Could not get Appearance configurations"
@@ -109,6 +109,9 @@ msgstr "Delete connection"
 
 msgid "Add data configuration"
 msgstr "Add data configuration"
+
+msgid "This ID is already in use"
+msgstr "This ID is already in use"
 
 msgid "Please provide either a PAT or username and password"
 msgstr "Please provide either a PAT or username and password"

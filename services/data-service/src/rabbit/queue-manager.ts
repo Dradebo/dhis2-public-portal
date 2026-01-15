@@ -4,6 +4,7 @@ import { DatastoreNamespaces } from "@packages/shared/constants";
 import { dhis2Client } from "@/clients/dhis2";
 import { DataServiceConfig } from "@packages/shared/schemas";
 import { getQueueNames } from "@/variables/queue-names";
+import { REFRESH_EXCHANGE } from "@/rabbit/constants";
 
 /**
  * Creates all required queues for a specific config
@@ -44,6 +45,14 @@ export async function createQueuesForConfig(configId: string) {
 	logger.info(`All queues created successfully for configId: ${configId}`);
 	logger.info(
 		`Restarting worker to setup consumers for new configuration: ${configId}`,
+	);
+	await currentChannel.assertExchange(REFRESH_EXCHANGE, "fanout", {
+		durable: true,
+	});
+	currentChannel.publish(
+		REFRESH_EXCHANGE,
+		REFRESH_EXCHANGE,
+		Buffer.from(JSON.stringify({ configId })),
 	);
 	logger.info(
 		`Worker restarted successfully. Configuration ${configId} is ready for processing.`,

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { Channel } from "amqplib";
+import { Channel, ChannelModel } from "amqplib";
 import figlet from "figlet";
 import logger from "@/logging";
 import { connectRabbit, getConnection } from "./connection";
@@ -12,6 +12,7 @@ import { DatastoreNamespaces } from "@packages/shared/constants";
 import { dhis2Client } from "@/clients/dhis2";
 import axios from "axios";
 import { downloadData } from "@/services/data-migration/data-download";
+import { REFRESH_EXCHANGE } from "@/rabbit/constants";
 
 let isConnecting = false;
 const RECONNECT_DELAY = 5000;
@@ -63,7 +64,6 @@ export const startWorker = async () => {
 			whitespaceBreak: true,
 		}),
 	);
-
 	if (isConnecting) {
 		logger.info("[Worker] A connection attempt is already in progress.");
 		return;
@@ -91,6 +91,7 @@ export const startWorker = async () => {
 		});
 		logger.info("[Worker] Setting up consumers...");
 		await setupConsumer(downloadChannel, uploadChannel);
+		await setupRefreshConsumer(connection);
 	} catch (error) {
 		logger.error(
 			"[Worker] Failed to connect during startup. Retrying...",
@@ -99,6 +100,26 @@ export const startWorker = async () => {
 		isConnecting = false;
 		setTimeout(startWorker, RECONNECT_DELAY);
 	}
+};
+
+const setupRefreshConsumer = async (connection: ChannelModel) => {
+	logger.info("[RefreshConsumer] Starting setup...");
+	const refreshChannel = await connection.createChannel();
+	await refreshChannel.assertExchange(REFRESH_EXCHANGE, "fanout", {
+		durable: true,
+	});
+	const queue = await refreshChannel.assertQueue("");
+	await refreshChannel.bindQueue(queue.queue, REFRESH_EXCHANGE, "");
+	await refreshChannel.consume(queue.queue, async (msg) => {
+		if (msg) {
+			const messageContent = JSON.parse(msg.content.toString());
+			logger.info(
+				`[RefreshConsumer] Received refresh message for config: ${messageContent.configId}`,
+			);
+			await setupConsumer(refreshChannel, refreshChannel);
+		}
+	});
+	logger.info("[RefreshConsumer] Setup complete. Waiting for messages...");
 };
 
 const setupConsumer = async (
@@ -115,20 +136,18 @@ const setupConsumer = async (
 		const prefetchCount = parseInt(
 			process.env.RABBITMQ_PREFETCH_COUNT || "20",
 		);
-		downloadChannel.prefetch(prefetchCount);
-		uploadChannel.prefetch(prefetchCount);
+		await downloadChannel.prefetch(prefetchCount);
+		await uploadChannel.prefetch(prefetchCount);
 
 		// Set up queues and consumers for each config
 		for (const configId of configIds) {
 			const queueNames = getQueueNames(configId);
-
 			await downloadChannel.assertQueue(queueNames.failed, {
 				durable: true,
 			});
 			await uploadChannel.assertQueue(queueNames.failed, {
 				durable: true,
 			});
-
 			// Queue configuration with DLQ
 			const queueOptions = {
 				durable: true,
