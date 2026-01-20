@@ -2,9 +2,10 @@ import React, { useEffect } from "react";
 import { RHFTextInputField } from "@hisptz/dhis2-ui";
 import i18n from "@dhis2/d2-i18n";
 import { useFormContext, useWatch } from "react-hook-form";
+import { StaticModule } from "@packages/shared/schemas";
 
 export function GeneralConfig() {
-	const { setValue } = useFormContext();
+	const { setValue } = useFormContext<StaticModule>();
 	const moduleId = useWatch({
 		name: "id",
 	});

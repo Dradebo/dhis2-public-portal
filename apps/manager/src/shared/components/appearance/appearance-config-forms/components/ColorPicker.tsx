@@ -1,6 +1,6 @@
 import React from "react";
 import { useFormContext } from "react-hook-form";
-import { Label } from "@dhis2/ui";
+import { Field, InputField } from "@dhis2/ui";
 
 type ColorPickerProps = {
 	name: string;
@@ -21,13 +21,15 @@ export function ColorPicker({ name, label }: ColorPickerProps) {
 		setValue(name, e.target.value, { shouldValidate: true });
 	};
 
-	const handleTextInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		setValue(name, e.target.value);
+	const handleTextInputChange = ({ value }: { value?: string }) => {
+		setValue(name, value, { shouldValidate: true });
 	};
 
+	const error = !!errors[name];
+	const validationText = (errors[name] as { message?: string })?.message;
+
 	return (
-		<div className="flex flex-col gap-1">
-			{label && <Label>{label}</Label>}
+		<Field label={label} error={error} validationText={validationText}>
 			<div className="flex items-center gap-2">
 				<input
 					type="color"
@@ -35,21 +37,19 @@ export function ColorPicker({ name, label }: ColorPickerProps) {
 					defaultValue="#000000"
 					value={value}
 					onChange={handleColorInputChange}
-					style={{ borderRadius: "50% !important" }}
-					className="w-9 h-9 rounded-sm cursor-pointer"
+					className="w-10 h-10  cursor-pointer rounded-sm p-0"
 				/>
-				<input
-					type="text"
-					className="w-24 px-2 py-1 border border-gray-300 rounded-sm !text-sm"
+				<InputField
+					className="w-20"
+					dense
+					/* @ts-expect-error @dhis2/ui errors*/
+					pattern="#[0-9a-fA-F]{6}"
+					name={name}
 					value={value || ""}
 					onChange={handleTextInputChange}
+					error={error}
 				/>
 			</div>
-			{errors[name] && (
-				<span className="!text-sm text-red-500">
-					{(errors[name] as { message?: string })?.message}
-				</span>
-			)}
-		</div>
+		</Field>
 	);
 }

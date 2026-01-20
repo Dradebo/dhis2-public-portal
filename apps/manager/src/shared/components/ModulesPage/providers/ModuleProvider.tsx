@@ -18,7 +18,7 @@ export function useRefreshModule() {
 
 export function ModuleProvider({ children }: { children: React.ReactNode }) {
 	const { moduleId } = useParams({
-		from: "/modules/_provider/$moduleId",
+		from: "/modules/_provider/$moduleId/_formProvider",
 	});
 
 	const { loading, error, module, refetch } = useModuleById(moduleId);

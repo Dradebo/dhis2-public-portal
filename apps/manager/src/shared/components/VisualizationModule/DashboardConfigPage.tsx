@@ -1,6 +1,6 @@
 import React from "react";
 import { DashboardGroupsConfig } from "./components/DashboardGroupsConfig/DashboardGroupsConfig";
-import { DashboardVisualizationsConfig } from "./components/DashboardVisualizationsConfig/DashboardVisualizationsConfig";
+import { ModuleVisualizationsConfig } from "./components/DashboardVisualizationsConfig/ModuleVisualizationsConfig";
 import { DashboardGeneralConfig } from "./components/DashboardGeneralConfig";
 
 export function DashboardConfigPage() {
@@ -8,7 +8,7 @@ export function DashboardConfigPage() {
 		<div className="flex flex-col gap-6 pb-4">
 			<DashboardGeneralConfig />
 			<DashboardGroupsConfig />
-			<DashboardVisualizationsConfig />
+			<ModuleVisualizationsConfig />
 		</div>
 	);
 }

@@ -1,13 +1,13 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import React from "react";
-import { ModuleContainer } from "../../../shared/components/ModuleContainer";
-import { MenuList } from "../../../shared/components/MenuPage/components/MenuList";
+import { ModuleContainer } from "@/shared/components/ModuleContainer";
+import { MenuList } from "@/shared/components/MenuPage/components/MenuList";
 import { FormProvider, useForm } from "react-hook-form";
 import { AppMenuConfig, menuConfig } from "@packages/shared/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMenuConfig } from "../../../shared/components/MenuPage/providers/MenuProvider";
-import { MenuPositionConfig } from "../../../shared/components/MenuPage/components/MenuPositionConfig";
-import { SaveMenuConfigChangesButton } from "../../../shared/components/MenuPage/components/SaveMenuConfigChangesButton";
+import { useMenuConfig } from "@/shared/components/MenuPage/providers/MenuProvider";
+import { MenuPositionConfig } from "@/shared/components/MenuPage/components/MenuPositionConfig";
+import { SaveMenuConfigChangesButton } from "@/shared/components/MenuPage/components/SaveMenuConfigChangesButton";
 
 export const Route = createLazyFileRoute("/menu/_provider/")({
 	component: RouteComponent,

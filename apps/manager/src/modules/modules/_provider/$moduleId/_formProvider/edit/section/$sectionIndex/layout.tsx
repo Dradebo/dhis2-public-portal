@@ -3,7 +3,7 @@ import {
 	useNavigate,
 	useParams,
 } from "@tanstack/react-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useState } from "react";
 import i18n from "@dhis2/d2-i18n";
 import {
 	Button,
@@ -14,21 +14,17 @@ import {
 	SingleSelectField,
 	SingleSelectOption,
 } from "@dhis2/ui";
-import { useFieldArray, useFormContext } from "react-hook-form";
+import { useFormContext } from "react-hook-form";
 import { z } from "zod";
-import {
-	AppModule,
-	DisplayItem,
-	DisplayItemType,
-	FlexibleLayoutConfig,
-	SectionModuleConfig,
-	VisualizationItem,
-} from "@packages/shared/schemas";
+import { AppModule } from "@packages/shared/schemas";
 import { SectionLayoutEditor } from "../../../../../../../../shared/components/SectionLayoutEditor";
 import { useSaveModule } from "../../../../../../../../shared/components/ModulesPage/hooks/save";
 import { useAlert } from "@dhis2/app-runtime";
-import { AddVisualization } from "../../../../../../../../shared/components/VisualizationModule/components/AddVisualization/AddVisualization";
-import { mapValues } from "lodash";
+import { AddSectionVisualization } from "../../../../../../../../shared/components/VisualizationModule/components/AddVisualization/AddVisualization";
+import {
+	ScreenSizeId,
+	SUPPORTED_SCREEN_SIZES,
+} from "@packages/shared/constants";
 
 const searchSchema = z.object({
 	subGroupIndex: z.number().optional(),
@@ -69,31 +65,15 @@ function RouteComponent() {
 		});
 	};
 
-	const { save } = useSaveModule(moduleId);
+	const { save } = useSaveModule();
 	const { handleSubmit, formState, reset } = useFormContext<AppModule>();
 	const { show } = useAlert(
 		({ message }) => message,
 		({ type }) => ({ ...type, duration: 3000 }),
 	);
-	const { setValue, getValues } = useFormContext<SectionModuleConfig>();
-	const [size, setSize] = useState<number>(1200);
-
-	const widths = useMemo(
-		() => [
-			{ name: i18n.t("Small screen"), value: 996 },
-			{ name: i18n.t("Medium screen"), value: 1200 },
-			{ name: i18n.t("Large screen"), value: 1500 },
-		],
-		[],
+	const [size, setSize] = useState<ScreenSizeId>(
+		SUPPORTED_SCREEN_SIZES[0].id,
 	);
-
-	const { append, remove, fields } = useFieldArray<
-		SectionModuleConfig,
-		`config.sections.${number}.items`
-	>({
-		name: `config.sections.${sectionIndex}.items`,
-		keyName: "fieldId" as unknown as "id",
-	});
 
 	const onError = (error) => {
 		console.error("Form validation errors:", error);
@@ -115,101 +95,6 @@ function RouteComponent() {
 			});
 		}
 	};
-
-	const onAddVisualization = useCallback(
-		(visualization: VisualizationItem) => {
-			if (fields.some((field) => field.item.id === visualization.id)) {
-				show({
-					message: i18n.t("This visualization is already added"),
-					type: { critical: true },
-				});
-				return;
-			}
-
-			const displayItem: DisplayItem = {
-				type: DisplayItemType.VISUALIZATION,
-				item: visualization,
-			};
-			append(displayItem);
-			const layouts = getValues(
-				`config.sections.${sectionIndex}.layouts`,
-			) as FlexibleLayoutConfig;
-			if (layouts) {
-				const updatedLayouts = mapValues(layouts, (value, key) => {
-					if (value) {
-						return [
-							...value,
-							{
-								i: visualization.id,
-								x: 0,
-								y: 0,
-								w:
-									key === "lg"
-										? 12
-										: key === "md"
-											? 10
-											: key === "sm"
-												? 6
-												: 4,
-								h: 8,
-							},
-						];
-					}
-					return [
-						{
-							i: visualization.id,
-							x: 0,
-							y: 0,
-							w:
-								key === "lg"
-									? 12
-									: key === "md"
-										? 10
-										: key === "sm"
-											? 6
-											: 4,
-							h: 8,
-						},
-					];
-				});
-				setValue(
-					`config.sections.${sectionIndex}.layouts`,
-					updatedLayouts,
-				);
-			} else {
-				setValue(`config.sections.${sectionIndex}.layouts`, {
-					lg: [{ i: visualization.id, x: 0, y: 0, w: 12, h: 8 }],
-					md: [{ i: visualization.id, x: 0, y: 0, w: 10, h: 8 }],
-					sm: [{ i: visualization.id, x: 0, y: 0, w: 6, h: 8 }],
-					xs: [{ i: visualization.id, x: 0, y: 0, w: 4, h: 8 }],
-				});
-			}
-		},
-		[append, fields, getValues, sectionIndex, setValue, show],
-	);
-
-	const handleDelete = useCallback(
-		(id: string) => {
-			const index = fields.findIndex((field) => field.item.id === id);
-			if (index === -1) {
-				return;
-			}
-			remove(index);
-			const layouts = getValues(
-				`config.sections.${sectionIndex}.layouts`,
-			) as FlexibleLayoutConfig;
-			const updatedLayouts = Object.fromEntries(
-				Object.entries(layouts).map(([key, value]) => [
-					key,
-					value
-						? value.filter((layoutItem) => layoutItem.i !== id)
-						: [],
-				]),
-			);
-			setValue(`config.sections.${sectionIndex}.layouts`, updatedLayouts);
-		},
-		[fields, remove, getValues, sectionIndex, setValue],
-	);
 
 	return (
 		<div className="w-full h-full flex flex-col gap-4">
@@ -263,28 +148,29 @@ function RouteComponent() {
 								dataTest={"screen-size-select"}
 								selected={size.toString()}
 								onChange={({ selected }) =>
-									setSize(parseInt(selected))
+									setSize(selected as ScreenSizeId)
 								}
 								label={i18n.t("Select screen size")}
 							>
-								{widths.map(({ name, value }) => (
+								{SUPPORTED_SCREEN_SIZES.map(({ name, id }) => (
 									<SingleSelectOption
-										key={value.toString()}
+										key={id}
 										label={name}
-										value={value.toString()}
+										value={id}
 									/>
 								))}
 							</SingleSelectField>
 						</div>
 						<div className="flex-col">
 							<h5 className="text-sm pb-5">{i18n.t("")}</h5>
-							<AddVisualization onAdd={onAddVisualization} />
+							<AddSectionVisualization
+								prefix={`config.sections.${sectionIndex}`}
+							/>
 						</div>
 					</div>
 				</Card>
 				<SectionLayoutEditor
 					size={size}
-					onDelete={handleDelete}
 					prefix={`config.sections.${sectionIndex}`}
 				/>
 			</div>

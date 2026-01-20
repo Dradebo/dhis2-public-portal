@@ -2,17 +2,20 @@ import React, {
 	DetailedHTMLProps,
 	forwardRef,
 	HTMLAttributes,
+	memo,
 	useCallback,
 	useMemo,
-	useRef,
 } from "react";
 import i18n from "@dhis2/d2-i18n";
 import { useController, useWatch } from "react-hook-form";
 import { IconCross24 } from "@dhis2/ui";
-import { Responsive as ResponsiveGridLayout } from "react-grid-layout";
-import { debounce } from "lodash";
 import {
-	FlexibleLayoutConfig,
+	Responsive as ResponsiveGridLayout,
+	useContainerWidth,
+	verticalCompactor,
+} from "react-grid-layout";
+import { debounce, fromPairs } from "lodash";
+import {
 	VisualizationItem,
 	VisualizationModule,
 } from "@packages/shared/schemas";
@@ -21,8 +24,13 @@ import "react-resizable/css/styles.css";
 import { MainVisualization } from "./ModulesPage/components/Visualizations/MainVisualization";
 import { ErrorBoundary } from "react-error-boundary";
 import { VisualizationError } from "./ModulesPage/components/Visualizations/components/VisualizationError";
+import { useManageVisualizations } from "./VisualizationModule/hooks/view";
+import {
+	ScreenSizeId,
+	SUPPORTED_SCREEN_SIZES,
+} from "@packages/shared/constants";
 
-function DashboardItem({ item }: { item: VisualizationItem }) {
+function DashboardItemComponent({ item }: { item: VisualizationItem }) {
 	return (
 		<div className="flex flex-col justify-center items-center h-full w-full overflow-y-auto gap-2">
 			<ErrorBoundary FallbackComponent={VisualizationError}>
@@ -31,6 +39,8 @@ function DashboardItem({ item }: { item: VisualizationItem }) {
 		</div>
 	);
 }
+
+const DashboardItem = memo(DashboardItemComponent);
 
 const GridItem = forwardRef<
 	HTMLDivElement,
@@ -96,13 +106,15 @@ const GridItem = forwardRef<
 export function DashboardLayoutEditor({
 	prefix,
 	size,
-	onDelete,
 }: {
 	prefix?: `config.groups.${number}`;
-	size?: number;
-	onDelete: (id: string) => void;
+	size: ScreenSizeId;
 }) {
-	const ref = useRef<HTMLDivElement>(null);
+	const { width, containerRef, mounted } = useContainerWidth();
+
+	const { onRemoveVisualization } = useManageVisualizations({
+		prefix,
+	});
 
 	const { field } = useController<
 		VisualizationModule,
@@ -134,50 +146,48 @@ export function DashboardLayoutEditor({
 	);
 
 	return (
-		<div className="flex flex-col gap-2" ref={ref}>
+		<div className="flex flex-col gap-2 w-full">
 			<div className="flex-1 flex justify-center w-full">
-				<div className="bg-white w-full" style={{ width: size }}>
-					<ResponsiveGridLayout
-						key={
-							visualizations?.map((v) => v.item.id).join(",") ||
-							"empty"
-						}
-						breakpoints={{
-							lg: 1200,
-							md: 996,
-							sm: 768,
-							xs: 480,
-							xxs: 120,
-						}}
-						cols={{
-							lg: 12,
-							md: 10,
-							sm: 6,
-							xs: 4,
-							xxs: 1,
-						}}
-						layouts={field.value as FlexibleLayoutConfig}
-						margin={[8, 8]}
-						className="layout"
-						allowOverlap={false}
-						rowHeight={80}
-						width={size}
-						autoSize
-						isDraggable
-						isDroppable
-						isResizable
-						useCSSTransforms={true}
-						compactType={null}
-						onLayoutChange={handleLayoutChange}
-					>
-						{visualizations?.map((item) => (
-							<GridItem
-								key={item.item.id}
-								item={item.item as VisualizationItem}
-								onDelete={onDelete}
-							/>
-						))}
-					</ResponsiveGridLayout>
+				<div ref={containerRef} className="bg-white w-full">
+					{mounted && (
+						<ResponsiveGridLayout
+							breakpoint={size}
+							compactor={verticalCompactor}
+							key={
+								visualizations
+									?.map((v) => v.item.id)
+									.join(",") || "empty"
+							}
+							breakpoints={
+								fromPairs(
+									SUPPORTED_SCREEN_SIZES.map((value) => {
+										return [value.id, value.value];
+									}),
+								) as { [key in ScreenSizeId]: number }
+							}
+							cols={
+								fromPairs(
+									SUPPORTED_SCREEN_SIZES.map((value) => {
+										return [value.id, value.cols];
+									}),
+								) as { [key in ScreenSizeId]: number }
+							}
+							layouts={field.value}
+							margin={[8, 8]}
+							className="layout"
+							rowHeight={80}
+							width={width}
+							onLayoutChange={handleLayoutChange}
+						>
+							{visualizations?.map((item) => (
+								<GridItem
+									key={item.item.id}
+									item={item.item as VisualizationItem}
+									onDelete={onRemoveVisualization}
+								/>
+							))}
+						</ResponsiveGridLayout>
+					)}
 				</div>
 			</div>
 		</div>

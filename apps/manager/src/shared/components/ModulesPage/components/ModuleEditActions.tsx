@@ -9,8 +9,10 @@ import { useSaveModule } from "../../ModulesPage/hooks/save";
 import { useRefreshModules } from "../providers/ModulesProvider";
 
 export function ModuleEditActions({ onComplete }: { onComplete: () => void }) {
-	const { moduleId } = useParams({ from: "/modules/_provider/$moduleId" });
-	const { save } = useSaveModule(moduleId);
+	const { moduleId } = useParams({
+		from: "/modules/_provider/$moduleId/_formProvider/edit/",
+	});
+	const { save } = useSaveModule();
 	const { handleSubmit, formState } = useFormContext<AppModule>();
 	const navigate = useNavigate();
 	const refresh = useRefreshModules();

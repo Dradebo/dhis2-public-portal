@@ -10,6 +10,10 @@ const viteConfig = defineConfig(async (configEnv) => {
 			tanstackRouter({
 				target: "react",
 				autoCodeSplitting: true,
+				routesDirectory: "../../src/modules",
+				generatedRouteTree: "../../src/routeTree.gen.ts",
+				verboseFileRoutes: true,
+				enableRouteGeneration: true,
 			}),
 			tailwindcss(),
 		],

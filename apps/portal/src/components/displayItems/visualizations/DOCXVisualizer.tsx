@@ -20,19 +20,16 @@ export function DOCXVisualizer({ path }: DOCXVisualizerProps) {
 			setError(null);
 
 			const response = await fetch(path);
-			
+
 			if (!response.ok) {
 				throw new Error(`Failed to load DOCX file: ${response.statusText}`);
 			}
 
 			const arrayBuffer = await response.arrayBuffer();
-			
- 			const result = await mammoth.convertToHtml({ arrayBuffer });
+
+			const result = await mammoth.convertToHtml({ arrayBuffer });
 			setContent(result.value);
-			
- 			if (result.messages.length > 0) {
-				console.log("Mammoth conversion messages:", result.messages);
-			}
+
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to load DOCX content");
 			console.error("Error loading DOCX:", err);
@@ -47,7 +44,7 @@ export function DOCXVisualizer({ path }: DOCXVisualizerProps) {
 
 	if (loading) {
 		return (
-			<Box className="w-full flex items-center justify-center h-[160px]">
+			<Box className="w-full flex items-center justify-center h-40">
 				<LoadingOverlay
 					visible={true}
 					zIndex={1000}
@@ -62,7 +59,7 @@ export function DOCXVisualizer({ path }: DOCXVisualizerProps) {
 
 	if (error) {
 		return (
-			<Box className="w-full flex flex-col items-center justify-center h-[160px] gap-2">
+			<Box className="w-full flex flex-col items-center justify-center h-40 gap-2">
 				<IconCircleX size={48} color="red" />
 				<Text size="xs" c="red" ta="center">
 					Failed to load document
@@ -73,7 +70,7 @@ export function DOCXVisualizer({ path }: DOCXVisualizerProps) {
 
 	if (!content) {
 		return (
-			<Box className="w-full flex flex-col items-center justify-center h-[160px] gap-2">
+			<Box className="w-full flex flex-col items-center justify-center h-40 gap-2">
 				<IconFileDescription size={64} color="#2563eb" />
 				<Text size="xs" c="dimmed" ta="center">
 					Word Document
@@ -83,7 +80,7 @@ export function DOCXVisualizer({ path }: DOCXVisualizerProps) {
 	}
 
 	return (
-		<Box className="w-full flex items-center justify-center h-[160px]">
+		<Box className="w-full flex items-center justify-center h-40">
 			<Box
 				dangerouslySetInnerHTML={{ __html: content }}
 				style={{

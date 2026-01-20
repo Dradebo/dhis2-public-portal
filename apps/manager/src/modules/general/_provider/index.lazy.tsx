@@ -1,11 +1,11 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import i18n from "@dhis2/d2-i18n";
 import React from "react";
-import { ModuleContainer } from "../../../shared/components/ModuleContainer";
+import { ModuleContainer } from "@/shared/components/ModuleContainer";
 import { Button, ButtonStrip } from "@dhis2/ui";
 import { useFormContext, useFormState } from "react-hook-form";
-import { useSaveMetadata } from "../../../shared/components/GeneralPage/hooks/data";
-import { GeneralForm } from "../../../shared/components/GeneralPage/components/GeneralForm";
+import { useSaveMetadata } from "@/shared/components/GeneralPage/hooks/data";
+import { GeneralForm } from "@/shared/components/GeneralPage/components/GeneralForm";
 
 export const Route = createLazyFileRoute("/general/_provider/")({
 	component: RouteComponent,

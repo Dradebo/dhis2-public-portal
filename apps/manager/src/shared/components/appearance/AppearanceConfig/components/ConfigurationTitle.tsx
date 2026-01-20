@@ -6,9 +6,8 @@ type Props = {
 
 export function ConfigurationTitle({ title }: Props) {
 	return (
-		<>
-			<h4 className="text-lg font-bold">{title}</h4>
-			<hr className="border-gray-300 my-2" />
-		</>
+		<div className="flex flex-col gap-2">
+			<h4 className="text-lg font-bold m-0">{title}</h4>
+		</div>
 	);
 }

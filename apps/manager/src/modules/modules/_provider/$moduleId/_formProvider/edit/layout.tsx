@@ -6,7 +6,7 @@ import {
 import React from "react";
 import { useFormContext } from "react-hook-form";
 import { AppModule } from "@packages/shared/schemas";
-import { VisualizationManager } from "../../../../../../shared/components/VisualizationModule/components/VisualizationManager";
+import { VisualizationManager } from "@/shared/components/VisualizationModule/components/VisualizationManager";
 
 export const Route = createFileRoute(
 	"/modules/_provider/$moduleId/_formProvider/edit/layout",
@@ -16,7 +16,7 @@ export const Route = createFileRoute(
 
 function RouteComponent() {
 	const { moduleId } = useParams({
-		from: "/modules/_provider/$moduleId",
+		from: "/modules/_provider/$moduleId/_formProvider",
 	});
 	const { resetField } = useFormContext<AppModule>();
 	const navigate = useNavigate();

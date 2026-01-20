@@ -1,3 +1,5 @@
+import { AppAppearanceConfig, AppMenuConfig, MetadataConfig } from "../schemas";
+
 export enum DatastoreNamespaces {
 	MODULES = "hisptz-public-portal-modules",
 	MAIN_CONFIG = "hisptz-public-portal",
@@ -9,3 +11,12 @@ export enum DatastoreKeys {
 	METADATA = "metadata",
 	MENU = "menu",
 }
+
+export type DatastoreConfig<T extends DatastoreKeys = DatastoreKeys> =
+	T extends DatastoreKeys.METADATA
+		? MetadataConfig
+		: T extends DatastoreKeys.MENU
+			? AppMenuConfig
+			: T extends DatastoreKeys.APPEARANCE
+				? AppAppearanceConfig
+				: never;

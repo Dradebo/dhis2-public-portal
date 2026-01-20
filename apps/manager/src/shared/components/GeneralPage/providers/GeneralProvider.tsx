@@ -11,7 +11,13 @@ const MetadataRefreshContext = createContext<() => Promise<void>>(
 );
 
 export function useMetadata() {
-	return useContext(MetadataContext)!;
+	const metadata = useContext(MetadataContext);
+
+	if (!metadata) {
+		throw Error("Could not find metadata ");
+	}
+
+	return metadata;
 }
 
 export function useRefreshMetadata() {

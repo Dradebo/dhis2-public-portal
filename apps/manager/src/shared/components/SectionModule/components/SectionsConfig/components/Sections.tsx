@@ -1,5 +1,5 @@
-import React from "react";
-import { SimpleDataTable, SimpleTableColumn } from "@hisptz/dhis2-ui";
+import React, { useMemo } from "react";
+import { SimpleTable, SimpleTableColumn } from "@hisptz/dhis2-ui";
 import i18n from "@dhis2/d2-i18n";
 import { Section } from "@packages/shared/schemas";
 import { startCase } from "lodash";
@@ -24,10 +24,14 @@ const columns: SimpleTableColumn[] = [
 ];
 
 export function Sections({ sections }: { sections: Section[] }) {
-	const rows = sections.map((section) => ({
-		...section,
-		type: startCase(section?.type?.toLowerCase()),
-	}));
+	const rows = useMemo(
+		() =>
+			sections.map((section) => ({
+				...section,
+				type: startCase(section?.type?.toLowerCase()),
+			})),
+		[sections],
+	);
 
-	return <SimpleDataTable columns={columns} rows={rows} />;
+	return <SimpleTable columns={columns} rows={rows} />;
 }

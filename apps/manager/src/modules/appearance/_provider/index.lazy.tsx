@@ -5,9 +5,9 @@ import { useDataQuery } from "@dhis2/app-runtime";
 import { CircularLoader, NoticeBox } from "@dhis2/ui";
 import { AppAppearanceConfig } from "@packages/shared/schemas";
 import { DatastoreKeys, DatastoreNamespaces } from "@packages/shared/constants";
-import { ModuleContainer } from "../../../shared/components/ModuleContainer";
-import { AppearanceConfig } from "../../../shared/components/appearance/AppearanceConfig/AppearanceConfig";
-import { MissingAppearanceConfig } from "../../../shared/components/appearance/MissingAppearanceConfig";
+import { ModuleContainer } from "@/shared/components/ModuleContainer";
+import { AppearanceConfig } from "@/shared/components/appearance/AppearanceConfig/AppearanceConfig";
+import { MissingAppearanceConfig } from "@/shared/components/appearance/MissingAppearanceConfig";
 
 const query = {
 	appearanceConfig: {

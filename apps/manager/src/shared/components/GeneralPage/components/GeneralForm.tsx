@@ -7,13 +7,19 @@ import { RHFIconInput } from "../../Fields/RHFIconInput";
 export function GeneralForm() {
 	return (
 		<div className="flex flex-col gap-2">
-			<RHFTextInputField label={i18n.t("Application name")} name="name" />
+			<RHFTextInputField
+				required
+				label={i18n.t("Application name")}
+				name="name"
+			/>
 			<RHFTextAreaField
+				required
 				label={i18n.t("Description")}
 				name="description"
 			/>
 			<RHFTextInputField
-				placeholder={"https://example.org/portal"}
+				required
+				placeholder={"https://dhis2-public-portal.vercel.app"}
 				label={i18n.t("Application URL")}
 				helpText={i18n.t("Where your portal can be found")}
 				name="applicationURL"

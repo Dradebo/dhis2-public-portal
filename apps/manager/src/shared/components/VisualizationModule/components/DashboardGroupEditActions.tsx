@@ -12,32 +12,34 @@ export function DashboardGroupEditActions() {
 		from: "/modules/$moduleId/edit/$groupIndex",
 	});
 
-	const { moduleId } = useParams({ from: "/modules/_provider/$moduleId" });
-		const { save } = useSaveModule(moduleId);
-		const { handleSubmit, formState } = useFormContext<AppModule>();
-		const { show } = useAlert(
-			({ message }) => message,
-			({ type }) => ({ ...type, duration: 3000 }),
-		);
-	
-		const onError = (e) => {
-			console.log(e);
+	const { moduleId } = useParams({
+		from: "/modules/_provider/$moduleId/_formProvider/edit/$groupIndex/",
+	});
+	const { save } = useSaveModule();
+	const { handleSubmit, formState } = useFormContext<AppModule>();
+	const { show } = useAlert(
+		({ message }) => message,
+		({ type }) => ({ ...type, duration: 3000 }),
+	);
+
+	const onError = (e) => {
+		console.log(e);
+		show({
+			message: i18n.t("Please fix the validation errors before saving"),
+			type: { critical: true },
+		});
+	};
+
+	const onSubmit = async (data: AppModule) => {
+		try {
+			await save(data);
+		} catch (error) {
 			show({
-				message: i18n.t("Please fix the validation errors before saving"),
+				message: i18n.t("Failed to save section", error),
 				type: { critical: true },
 			});
-		};
-	
-		const onSubmit = async (data: AppModule) => {
-			try {
-				await save(data);
-			} catch (error) {
-				show({
-					message: i18n.t("Failed to save section", error),
-					type: { critical: true },
-				});
-			}
-		};
+		}
+	};
 
 	return (
 		<ButtonStrip end>

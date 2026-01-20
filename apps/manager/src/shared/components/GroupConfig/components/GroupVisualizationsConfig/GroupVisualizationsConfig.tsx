@@ -1,11 +1,6 @@
 import React from "react";
 import i18n from "@dhis2/d2-i18n";
-import {
-	Button,
-	ButtonStrip,
-	Divider,
-	IconLayoutColumns24,
-} from "@dhis2/ui";
+import { Button, ButtonStrip, Divider, IconLayoutColumns24 } from "@dhis2/ui";
 import { GroupVisualizations } from "./components/GroupVisualizations";
 import { useFieldArray } from "react-hook-form";
 import { useNavigate, useParams } from "@tanstack/react-router";
@@ -16,9 +11,8 @@ import {
 	VisualizationItem,
 	VisualizationModule,
 } from "@packages/shared/schemas";
-import { useVisualizationNames } from "../../../VisualizationModule/hooks/data";
-import { FullLoader } from "../../../FullLoader";
-import ErrorPage from "../../../ErrorPage/ErrorPage";
+import { VisualizationNameResolver } from "@/shared/components/VisualizationNameResolver";
+import { capitalize } from "lodash";
 
 export function GroupVisualizationsConfig() {
 	const { moduleId, groupIndex } = useParams({
@@ -35,13 +29,6 @@ export function GroupVisualizationsConfig() {
 		keyName: "fieldId" as unknown as "id",
 	});
 
-	const visualizationIds = fields
-		.filter((field) => field.type === DisplayItemType.VISUALIZATION)
-		.map((field) => (field.item as VisualizationItem).id);
-
-	const { visualizationNames, loading, error } =
-		useVisualizationNames(visualizationIds);
-
 	const rows = fields
 		.filter((field) => field.type === DisplayItemType.VISUALIZATION)
 		.map((field) => {
@@ -52,24 +39,17 @@ export function GroupVisualizationsConfig() {
 			const visId = visField.item.id;
 			return {
 				...visField.item,
-				id: visualizationNames.get(visId) || visId,
+				type: capitalize(visField.item.type),
+				id: visId,
+				caption: visField.item.caption || "N/A",
+				name: (
+					<VisualizationNameResolver
+						key={`${visId}-name`}
+						id={visId}
+					/>
+				),
 			};
 		});
-
-	if (loading) {
-		return (
-			<div>
-				<FullLoader />
-			</div>
-		);
-	}
-	if (error) {
-		return (
-			<div>
-				<ErrorPage error={i18n.t("Error loading visualizations: ")} />
-			</div>
-		);
-	}
 
 	return (
 		<div className="flex-1 w-full flex flex-col gap-2">

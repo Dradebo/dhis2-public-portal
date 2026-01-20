@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import React from "react";
-import { GroupConfigPage } from "../../../../../../../shared/components/GroupConfig/GroupConfigPage";
+import { GroupConfigPage } from "@/shared/components/GroupConfig/GroupConfigPage";
 
 export const Route = createFileRoute(
 	"/modules/_provider/$moduleId/_formProvider/edit/$groupIndex/",
